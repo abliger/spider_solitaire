@@ -1,6 +1,6 @@
 extends Node
 
-## Singleton/Autoload for handling card drag-and-drop across the board.
+## 单例 / 自动加载，用于处理整个面板的纸牌拖拽。
 
 signal drag_started(cards)
 signal drag_ended(success: bool, target_column: Column)
@@ -9,7 +9,7 @@ signal invalid_move_attempted
 const DRAG_LAYER: int = 100
 
 var _board: Board = null
-var _drag_container: CanvasLayer
+var _drag_container: Control
 var _dragged_cards: Array[Card] = []
 var _source_column: Column = null
 var _original_positions: Array[Vector2] = []
@@ -20,17 +20,20 @@ var _using_touch: bool = false
 
 
 func _ready() -> void:
-	_drag_container = CanvasLayer.new()
-	_drag_container.layer = DRAG_LAYER
+	_drag_container = Control.new()
+	_drag_container.name = "DragContainer"
+	_drag_container.z_index = DRAG_LAYER
+	_drag_container.top_level = true
+	_drag_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_drag_container)
 
 
-## Registers the active game board so the drag system can query columns and execute moves.
+## 注册活跃的游戏面板，以便拖拽系统可以查询列并执行移动。
 func register_board(board: Board) -> void:
 	_board = board
 
 
-## Forces an immediate end to any active drag without animation. Used when resetting the board.
+## 强制立即结束任何活跃的拖拽（无动画）。重置面板时使用。
 func force_end_drag() -> void:
 	if not _is_dragging:
 		return
@@ -46,7 +49,7 @@ func force_end_drag() -> void:
 	_cleanup_drag()
 
 
-## Begins dragging the movable sequence that contains `card` from `source_column`.
+## 开始拖拽 `source_column` 中包含 `card` 的可移动序列。
 func start_drag(source_column: Column, card: Card) -> void:
 	if _is_dragging:
 		return
@@ -79,7 +82,7 @@ func start_drag(source_column: Column, card: Card) -> void:
 	drag_started.emit(_dragged_cards.duplicate())
 
 
-## Ends the current drag, validates the drop, and either commits the move or animates back.
+## 结束当前拖拽，验证放置，然后提交移动或播放返回动画。
 func end_drag() -> void:
 	if not _is_dragging:
 		return
@@ -89,7 +92,7 @@ func end_drag() -> void:
 	var target_column := _detect_column_at_position(drop_pos)
 	var success := false
 
-	# Reparent back to source so Board methods work correctly.
+	# 重新父级到源列，以便 Board 方法正常工作。
 	_reparent_to_source_immediate()
 
 	if target_column != null and target_column != _source_column:
@@ -148,7 +151,7 @@ func _get_input_position() -> Vector2:
 	return get_viewport().get_mouse_position()
 
 
-## Raycasts for a Column Area2D under the given position.
+## 在给定位置下进行射线检测以查找 Column Area2D。
 func _detect_column_at_position(pos: Vector2) -> Column:
 	if _board == null:
 		return null
@@ -157,6 +160,7 @@ func _detect_column_at_position(pos: Vector2) -> Column:
 	var query := PhysicsPointQueryParameters2D.new()
 	query.position = pos
 	query.collision_mask = 2  # Columns are on layer 2
+	# 列位于碰撞层 2
 	query.collide_with_areas = true
 	query.collide_with_bodies = false
 
@@ -175,7 +179,7 @@ func _detect_column_at_position(pos: Vector2) -> Column:
 	return null
 
 
-## Reparents dragged cards back to the source column without animation.
+## 将拖拽的纸牌无动画地重新父级到源列。
 func _reparent_to_source_immediate() -> void:
 	if not is_instance_valid(_source_column):
 		return
@@ -188,7 +192,7 @@ func _reparent_to_source_immediate() -> void:
 			card.global_position = gpos
 
 
-## Animates cards back to their original positions within the source column.
+## 将纸牌动画回到源列中的原始位置。
 func _animate_to_original() -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
@@ -206,7 +210,7 @@ func _animate_to_original() -> void:
 
 
 func _cleanup_drag() -> void:
-	# Note: z_index is managed by Column._reposition_cards(), do not reset it here.
+	# 注意：z_index 由 Column._reposition_cards() 管理，不要在这里重置。
 	_dragged_cards.clear()
 	_original_positions.clear()
 	_source_column = null

@@ -1,6 +1,6 @@
 extends Node
 
-## Singleton/Autoload that records every move for unlimited undo support.
+## 单例 / 自动加载，记录每一步移动以支持无限撤销。
 
 class MoveRecord:
 	var from_column: int
@@ -29,7 +29,7 @@ class MoveRecord:
 var _history: Array[MoveRecord] = []
 
 
-## Records a new move onto the history stack. Returns the created record so callers can update it later.
+## 将新移动记录到历史栈上。返回创建的记录，以便调用者稍后更新。
 func record_move(
 	from_column: int,
 	to_column: int,
@@ -43,24 +43,24 @@ func record_move(
 	return record
 
 
-## Removes and returns the most recent move record, or null if the stack is empty.
+## 移除并返回最近的移动记录，如果栈为空则返回 null。
 func undo_last_move() -> MoveRecord:
 	if _history.is_empty():
 		return null
 	return _history.pop_back()
 
 
-## Returns true when at least one move can be undone.
+## 当至少可以撤销一步移动时返回 true。
 func can_undo() -> bool:
 	return not _history.is_empty()
 
 
-## Clears the entire move history (e.g. when starting a new game).
+## 清空整个移动历史（例如开始新游戏时）。
 func clear() -> void:
 	_history.clear()
 
 
-## Updates the most recent move record with additional information.
+## 使用附加信息更新最近的移动记录。
 func update_last_record(flipped_card: bool, sequences_completed: int, score_delta: int) -> void:
 	if _history.is_empty():
 		return
@@ -70,6 +70,6 @@ func update_last_record(flipped_card: bool, sequences_completed: int, score_delt
 	record.score_delta += score_delta
 
 
-## Returns the number of recorded moves.
+## 返回已记录的移动数量。
 func get_history_count() -> int:
 	return _history.size()

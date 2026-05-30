@@ -1,17 +1,17 @@
 class_name Board
 extends Control
 
-## Emitted once the board has finished setting up a new game.
+## 当新游戏设置完成后发出此信号。
 signal board_ready
-## Emitted after a batch of 10 cards is dealt from stock to columns.
+## 从发牌堆向各列发一批 10 张纸牌后发出此信号。
 signal stock_dealt(cards_dealt: Array)
-## Emitted when a full K-A same-suit sequence is found and removed.
+## 当发现并成功移除一组完整的 K-A 同花色序列时发出此信号。
 signal sequence_completed(sequence: Array)
-## Emitted when all 8 sequences have been completed (game won).
+## 当完成全部 8 组序列时发出此信号（游戏胜利）。
 signal game_won
 
 # ---------------------------------------------------------------------------
-# Scene references
+# 场景引用
 # ---------------------------------------------------------------------------
 @export var column_scene: PackedScene
 @export var card_scene: PackedScene
@@ -20,43 +20,43 @@ signal game_won
 @onready var stock_count_label: Label = $StockCountLabel
 
 # ---------------------------------------------------------------------------
-# Layout constants
+# 布局常量
 # ---------------------------------------------------------------------------
 const NUM_COLUMNS: int = 10
 const NUM_FOUNDATIONS: int = 8
 const CARDS_PER_DEAL: int = 10
 const FULL_SEQUENCE_LENGTH: int = 13
 
-# Initial deal: 4 columns get 6 cards, 6 columns get 5 cards
+# 初始发牌：4 列各得 6 张牌，6 列各得 5 张牌
 const INITIAL_SIX_CARD_COLS: int = 4
 const INITIAL_FIVE_CARD_COLS: int = 6
 
-# Column layout
+# 列布局
 const COLUMN_WIDTH: int = 100
 const COLUMN_SPACING: int = 18
 const COLUMNS_START_X: int = 40
 const COLUMNS_START_Y: int = 140
 
 # ---------------------------------------------------------------------------
-# Board state
+# 面板状态
 # ---------------------------------------------------------------------------
-## The 10 columns on the board.
+## 面板上的 10 列纸牌。
 var columns: Array[Column] = []
 
-## The stock pile (array of Card nodes not yet dealt).
+## 发牌堆（尚未发出的 Card 节点数组）。
 var stock: Array[Card] = []
 
-## Completed sequences removed from the board (up to 8).
+## 从面板移除的完整序列（最多 8 组）。
 var foundations: Array[Array] = []
 
-## Current difficulty (affects number of suits).
+## 当前难度（影响花色数量）。
 var current_difficulty: int = 1
 
 # ---------------------------------------------------------------------------
-# Built-in overrides
+# 内置函数重写
 # ---------------------------------------------------------------------------
 func _ready() -> void:
-	# Load default scenes if not assigned in inspector
+	# 如果在检查器中未分配，则加载默认场景
 	if column_scene == null:
 		column_scene = preload("res://scenes/column.tscn")
 	if card_scene == null:
@@ -65,25 +65,25 @@ func _ready() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Game setup
+# 游戏设置
 # ---------------------------------------------------------------------------
-## Starts a new game with the given difficulty (1 = Easy, 2 = Medium, 4 = Hard).
+## 以给定难度开始新游戏（1 = 简单，2 = 中等，4 = 困难）。
 func setup_new_game(difficulty: int) -> void:
 	current_difficulty = difficulty
 	_clear_board()
 
-	# Create deck using the existing RulesEngine
+	# 使用现有的 RulesEngine 创建牌组
 	var deck_data: Array[RulesEngine.CardData] = RulesEngine.create_deck(current_difficulty)
 	RulesEngine.shuffle(deck_data)
 
-	# Convert CardData to Card nodes
+	# 将 CardData 转换为 Card 节点
 	var all_cards: Array[Card] = []
 	for data in deck_data:
 		var card = _create_card_from_data(data)
 		all_cards.append(card)
 
-	# --- Initial deal ---
-	# 4 columns × 6 cards + 6 columns × 5 cards = 24 + 30 = 54 cards
+	# --- 初始发牌 ---
+	# 4 列 × 6 张 + 6 列 × 5 张 = 24 + 30 = 54 张
 	var dealt_count := 0
 	for col_idx in range(NUM_COLUMNS):
 		var col = _create_column(col_idx)
@@ -91,20 +91,20 @@ func setup_new_game(difficulty: int) -> void:
 		var cards_for_col: Array[Card] = []
 		for i in range(card_count):
 			var card = all_cards[dealt_count]
-			# All cards start face-down; only the bottom card is flipped later
+			# 所有纸牌初始为背面朝上；稍后只有最底部的纸牌被翻开
 			card.face_up = false
 			cards_for_col.append(card)
 			dealt_count += 1
 		col.add_cards(cards_for_col)
 
-	# Flip the top card in each column face-up
+	# 将每列最顶部的纸牌翻为正面朝上
 	for col in columns:
 		var cards = col.get_cards()
 		if not cards.is_empty():
 			cards[cards.size() - 1].flip()
 
-	# --- Stock pile ---
-	# Remaining 104 - 54 = 50 cards
+	# --- 发牌堆 ---
+	# 剩余 104 - 54 = 50 张
 	for i in range(dealt_count, all_cards.size()):
 		stock.append(all_cards[i])
 
@@ -115,10 +115,10 @@ func setup_new_game(difficulty: int) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Stock dealing
+# 发牌堆发牌
 # ---------------------------------------------------------------------------
-## Deals one card to each of the 10 columns from the stock pile.
-## Returns true if cards were dealt, false if stock is empty.
+## 从发牌堆向 10 列各发一张牌。
+## 如果成功发牌返回 true，如果发牌堆为空返回 false。
 func deal_from_stock() -> bool:
 	if not GameState.is_game_active:
 		return false
@@ -127,7 +127,7 @@ func deal_from_stock() -> bool:
 	if stock.size() < CARDS_PER_DEAL:
 		return false
 
-	# Verify no column is empty (Spider Solitaire rule: can't deal if any column is empty)
+	# 验证没有空列（蜘蛛纸牌规则：如果有空列则不能发牌）
 	for col in columns:
 		if col.is_empty():
 			return false
@@ -148,10 +148,10 @@ func deal_from_stock() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Card movement
+# 纸牌移动
 # ---------------------------------------------------------------------------
-## Moves `count` cards from `from_col` index to `to_col` index.
-## Returns true if the move was valid and executed.
+## 将 `count` 张纸牌从 `from_col` 索引列移动到 `to_col` 索引列。
+## 如果移动合法并已执行则返回 true。
 func move_cards(from_col: int, to_col: int, count: int, record_history: bool = true, ignore_rules: bool = false, check_sequences: bool = true, flip_revealed: bool = true) -> bool:
 	if from_col < 0 or from_col >= NUM_COLUMNS:
 		return false
@@ -175,13 +175,13 @@ func move_cards(from_col: int, to_col: int, count: int, record_history: bool = t
 			SoundManager.play_sfx("error")
 			return false
 
-	# Check whether the source column has a face-down top card (may be flipped after removal)
+	# 检查源列顶部是否有一张背面朝上的纸牌（移除后可能会被翻开）
 	var source_had_face_down_top := false
 	var source_top: Card = source.get_top_card()
 	if source_top != null and not source_top.face_up:
 		source_had_face_down_top = true
 
-	# Execute the move
+	# 执行移动
 	var removed = source.remove_cards(count, flip_revealed)
 	target.add_cards(removed)
 
@@ -189,12 +189,12 @@ func move_cards(from_col: int, to_col: int, count: int, record_history: bool = t
 	GameState.add_score(-1)
 	SoundManager.play_sfx("move")
 
-	# Record move for undo
+	# 记录移动以便撤销
 	var record: MoveHistory.MoveRecord = null
 	if record_history:
 		record = MoveHistory.record_move(from_col, to_col, removed, false, 0, -1)
 
-	# Check for completed sequences after the move
+	# 移动后检查是否有完成的序列
 	if check_sequences:
 		var sequences_found := _check_all_columns_for_sequences()
 		if record != null:
@@ -206,8 +206,8 @@ func move_cards(from_col: int, to_col: int, count: int, record_history: bool = t
 	return true
 
 
-## Moves a specific sequence of cards (used by drag-and-drop).
-## `cards` must be a contiguous top sequence from `from_col`.
+## 移动特定的纸牌序列（用于拖拽）。
+## `cards` 必须是 `from_col` 列顶部连续的序列。
 func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history: bool = true, ignore_rules: bool = false, check_sequences: bool = true, flip_revealed: bool = true) -> bool:
 	if from_col < 0 or from_col >= NUM_COLUMNS:
 		return false
@@ -221,7 +221,7 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 	var source = columns[from_col]
 	var target = columns[to_col]
 
-	# Verify the cards are actually at the top of the source column
+	# 验证这些纸牌确实位于源列的顶部
 	var source_cards = source.get_cards()
 	var start_idx = source_cards.find(cards[0])
 	if start_idx == -1:
@@ -229,7 +229,7 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 	for i in range(cards.size()):
 		if source_cards[start_idx + i] != cards[i]:
 			return false
-	# Ensure they are the top-most cards
+	# 确保它们是最顶部的纸牌
 	if start_idx + cards.size() != source_cards.size():
 		return false
 
@@ -241,13 +241,13 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 			SoundManager.play_sfx("error")
 			return false
 
-	# Check whether the source column has a face-down top card (may be flipped after removal)
+	# 检查源列顶部是否有一张背面朝上的纸牌（移除后可能会被翻开）
 	var source_had_face_down_top := false
 	var source_top: Card = source.get_top_card()
 	if source_top != null and not source_top.face_up:
 		source_had_face_down_top = true
 
-	# Execute
+	# 执行移动
 	source.remove_specific_cards(cards, flip_revealed)
 	target.add_cards(cards)
 
@@ -255,12 +255,12 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 	GameState.add_score(-1)
 	SoundManager.play_sfx("move")
 
-	# Record move for undo
+	# 记录移动以便撤销
 	var record: MoveHistory.MoveRecord = null
 	if record_history:
 		record = MoveHistory.record_move(from_col, to_col, cards, false, 0, -1)
 
-	# Check for completed sequences after the move
+	# 移动后检查是否有完成的序列
 	if check_sequences:
 		var sequences_found := _check_all_columns_for_sequences()
 		if record != null:
@@ -273,9 +273,9 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 
 
 # ---------------------------------------------------------------------------
-# Sequence / win checking
+# 序列 / 胜利检查
 # ---------------------------------------------------------------------------
-## Scans all columns for a complete K-A same-suit sequence.
+## 扫描所有列以查找完整的 K-A 同花色序列。
 func check_for_complete_sequence() -> void:
 	_check_all_columns_for_sequences()
 
@@ -290,7 +290,7 @@ func _check_all_columns_for_sequences() -> int:
 			if start_idx == -1:
 				break
 
-			# Remove the 13-card sequence
+			# 移除 13 张纸牌的序列
 			var sequence: Array = []
 			var source_cards = col.get_cards()
 			for i in range(start_idx, start_idx + FULL_SEQUENCE_LENGTH):
@@ -304,7 +304,7 @@ func _check_all_columns_for_sequences() -> int:
 			sequence_completed.emit(sequence)
 			found_count += 1
 
-			# Check for overall win
+			# 检查是否全局胜利
 			if foundations.size() >= NUM_FOUNDATIONS:
 				GameState.end_game()
 				game_won.emit()
@@ -313,9 +313,9 @@ func _check_all_columns_for_sequences() -> int:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# 辅助函数
 # ---------------------------------------------------------------------------
-## Creates and returns a Card node from CardData.
+## 根据 CardData 创建并返回 Card 节点。
 func _create_card_from_data(data: RulesEngine.CardData) -> Card:
 	var card: Card = card_scene.instantiate() as Card
 	card.set_card_data(data.suit, data.rank)
@@ -323,12 +323,12 @@ func _create_card_from_data(data: RulesEngine.CardData) -> Card:
 	return card
 
 
-## Creates a Column node and adds it to the board.
+## 创建 Column 节点并将其添加到面板。
 func _create_column(index: int) -> Column:
 	var col: Column = column_scene.instantiate() as Column
 	col.name = "Column_%d" % index
 	columns.append(col)
-	# Add to the columns container if available, otherwise to self
+	# 如果可用则添加到列容器，否则添加到自身
 	if columns_container:
 		columns_container.add_child(col)
 	else:
@@ -336,7 +336,7 @@ func _create_column(index: int) -> Column:
 	return col
 
 
-## Returns the top `count` cards from a column as an array.
+## 返回一列顶部 `count` 张纸牌组成的数组。
 func _get_top_cards(col: Column, count: int) -> Array[Card]:
 	var cards := col.get_cards()
 	if count > cards.size():
@@ -347,7 +347,7 @@ func _get_top_cards(col: Column, count: int) -> Array[Card]:
 	return result
 
 
-## Converts an array of Card nodes to RulesEngine.CardData for rule checking.
+## 将 Card 节点数组转换为 RulesEngine.CardData 以便进行规则检查。
 func _cards_to_data(cards: Array) -> Array[RulesEngine.CardData]:
 	var result: Array[RulesEngine.CardData] = []
 	for card in cards:
@@ -357,11 +357,11 @@ func _cards_to_data(cards: Array) -> Array[RulesEngine.CardData]:
 	return result
 
 
-## Positions the 10 columns in a horizontal row inside the columns container.
+## 在列容器内将 10 列水平排列。
 func _position_columns() -> void:
 	for i in range(columns.size()):
 		var col = columns[i]
-		# Positions are relative to the parent (Board or ColumnsContainer)
+		# 位置相对于父节点（Board 或 ColumnsContainer）
 		if columns_container and col.get_parent() == columns_container:
 			col.position = Vector2(
 				i * (COLUMN_WIDTH + COLUMN_SPACING),
@@ -374,30 +374,30 @@ func _position_columns() -> void:
 			)
 
 
-## Updates the stock count label text.
+## 更新发牌堆计数标签文本。
 func _update_stock_label() -> void:
 	if stock_count_label:
 		stock_count_label.text = Localization.translate("stock_left") % stock.size()
 
 
-## Removes all columns, cards, and resets stock/foundations.
+## 移除所有列和纸牌，并重置发牌堆 / 基础区。
 func _clear_board() -> void:
-	# Force-end any active drag before clearing
+	# 清理前强制结束任何活跃的拖拽
 	DragSystem.force_end_drag()
 
-	# Remove existing columns
+	# 移除现有列
 	for col in columns:
 		if is_instance_valid(col):
 			col.queue_free()
 	columns.clear()
 
-	# Any remaining cards in stock
+	# 发牌堆中剩余的纸牌
 	for card in stock:
 		if is_instance_valid(card):
 			card.queue_free()
 	stock.clear()
 
-	# Clear foundations
+	# 清空基础区
 	for seq in foundations:
 		for card in seq:
 			if is_instance_valid(card):
@@ -405,4 +405,3 @@ func _clear_board() -> void:
 	foundations.clear()
 
 	_update_stock_label()
-

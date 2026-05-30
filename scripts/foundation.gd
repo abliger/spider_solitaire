@@ -1,19 +1,20 @@
 class_name Foundation
 extends Control
 
-## Visual indicator for completed K->A sequences (up to 8 slots).
+## 完成序列（K→A）的视觉指示器，最多支持 8 个槽位。
 
-const SLOT_WIDTH: int = 100
-const SLOT_HEIGHT: int = 140
-const SLOT_SPACING: int = 12
-const NUM_SLOTS: int = 8
-const CORNER_RADIUS: int = 8
+const SLOT_WIDTH: int = 100     # 单个槽位宽度 / Width of each foundation slot
+const SLOT_HEIGHT: int = 140    # 单个槽位高度 / Height of each foundation slot
+const SLOT_SPACING: int = 12    # 槽位之间的间距 / Spacing between slots
+const NUM_SLOTS: int = 8        # 总槽位数量（对应 8 组完整序列） / Total number of foundation slots
+const CORNER_RADIUS: int = 8    # 圆角半径 / Corner radius for drawing
 
-var _completed_count: int = 0
-var _back_texture: Texture2D = null
+var _completed_count: int = 0   # 当前已完成的序列数量 / Number of completed sequences
+var _back_texture: Texture2D = null  # 牌背纹理，用于填充完成的槽位 / Card back texture for filled slots
 
 
 func _ready() -> void:
+	# 根据槽位数量计算控件总宽度
 	custom_minimum_size = Vector2(
 		NUM_SLOTS * SLOT_WIDTH + (NUM_SLOTS - 1) * SLOT_SPACING,
 		SLOT_HEIGHT
@@ -23,26 +24,26 @@ func _ready() -> void:
 	queue_redraw()
 
 
-## Marks another slot as filled by a completed sequence.
+## 将另一个槽位标记为由完成的序列填充。
 func add_completed_sequence() -> void:
 	if _completed_count < NUM_SLOTS:
 		_completed_count += 1
 		queue_redraw()
 
 
-## Removes one completed sequence (used for undo).
+## 移除一个已完成的序列（用于撤销操作）。
 func remove_completed_sequence() -> void:
 	if _completed_count > 0:
 		_completed_count -= 1
 		queue_redraw()
 
 
-## Returns how many sequences have been completed so far.
+## 返回目前已完成的序列数量。
 func get_completed_count() -> int:
 	return _completed_count
 
 
-## Resets all slots to empty.
+## 重置所有槽位为空。
 func reset() -> void:
 	_completed_count = 0
 	queue_redraw()
@@ -53,14 +54,14 @@ func _draw() -> void:
 		var x: float = i * (SLOT_WIDTH + SLOT_SPACING)
 		var rect := Rect2(Vector2(x, 0), Vector2(SLOT_WIDTH, SLOT_HEIGHT))
 
-		# Empty slot: dark inner with golden outline
+		# 空槽位：深色内部配金色外边框
 		_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(0.06, 0.18, 0.1, 0.6))
 		draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(0.6, 0.5, 0.2, 0.5), 2.0)
-		# Inner thin gold line
+		# 内部细金色线条
 		var inner_outline := rect.grow(-4)
 		draw_rounded_rect_outline(inner_outline, CORNER_RADIUS - 2, Color(0.5, 0.42, 0.15, 0.35), 1.0)
 
-		# If this slot has a completed sequence, draw a filled card-back style indicator
+		# 如果该槽位有完成的序列，绘制填充的牌背风格指示器
 		if i < _completed_count:
 			var inner_rect := rect.grow(-6)
 			_draw_rounded_rect_fill(inner_rect, CORNER_RADIUS - 1, Color("#0c1f3d"))
@@ -68,17 +69,17 @@ func _draw() -> void:
 			_draw_rounded_rect_fill(ii_rect, CORNER_RADIUS - 2, Color("#0f2850"))
 			draw_rounded_rect_outline(ii_rect, CORNER_RADIUS - 2, Color("#1a3d6e"), 1.0)
 
-			# Draw a spade symbol to indicate a completed sequence
+			# 绘制黑桃符号以指示完成的序列
 			var font: Font = get_theme_default_font()
 			var symbol: String = "♠"
 			var text_size: Vector2 = font.get_string_size(symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 32)
 			var pos: Vector2 = rect.position + (rect.size - text_size) * 0.5 + Vector2(0, text_size.y * 0.5)
-			# Slight shadow
+			# 轻微阴影
 			draw_string(font, pos + Vector2(1, 1), symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 32, Color(0, 0, 0, 0.3))
 			draw_string(font, pos, symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 32, Color.WHITE)
 
 
-## Fills a rounded rectangle with the given color.
+## 用指定颜色填充一个圆角矩形。
 func _draw_rounded_rect_fill(rect: Rect2, radius: float, color: Color) -> void:
 	var r: float = min(radius, min(rect.size.x * 0.5, rect.size.y * 0.5))
 	var inner := Rect2(rect.position + Vector2(r, 0), rect.size - Vector2(r * 2, 0))

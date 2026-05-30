@@ -1,15 +1,15 @@
 class_name Card
 extends Control
 
-## Emitted when the player clicks on this card.
+## 当玩家点击此纸牌时发出此信号。
 signal card_clicked(card)
-## Emitted when the player starts dragging this card.
+## 当玩家开始拖拽此纸牌时发出此信号。
 signal card_drag_started(card)
-## Emitted when the player stops dragging this card.
+## 当玩家停止拖拽此纸牌时发出此信号。
 signal card_drag_ended(card)
 
 # ---------------------------------------------------------------------------
-# Card appearance constants
+# 纸牌外观常量
 # ---------------------------------------------------------------------------
 const CARD_WIDTH: int = 100
 const CARD_HEIGHT: int = 140
@@ -22,40 +22,40 @@ const COURT_SUIT_SIZE: int = 28
 const CENTER_SUIT_SIZE: int = 52
 
 # ---------------------------------------------------------------------------
-# Card properties
+# 纸牌属性
 # ---------------------------------------------------------------------------
-## Suit index: 0 = Spades, 1 = Hearts, 2 = Diamonds, 3 = Clubs
+## 花色索引：0 = 黑桃，1 = 红桃，2 = 方块，3 = 梅花
 var suit: int = 0:
 	set(value):
 		suit = value
 		queue_redraw()
 
-## Rank: 1 (Ace) through 13 (King)
+## 点数：1（A）到 13（K）
 var rank: int = 1:
 	set(value):
 		rank = value
 		queue_redraw()
 
-## Whether the card is face-up (true) or face-down (false)
+## 纸牌是否为正面朝上（true）或背面朝上（false）
 var face_up: bool = false:
 	set(value):
 		face_up = value
 		queue_redraw()
 
-## Whether the card is highlighted (e.g., selected for a move)
+## 纸牌是否被高亮（例如，被选为移动目标）
 var is_highlighted: bool = false:
 	set(value):
 		is_highlighted = value
 		queue_redraw()
 
-## Internal flag tracking whether the player is currently dragging this card.
+## 内部标志，追踪玩家是否正在拖拽此纸牌。
 var _is_dragging: bool = false
 
 var _face_texture: Texture2D = null
 var _back_texture: Texture2D = null
 
 # ---------------------------------------------------------------------------
-# Built-in overrides
+# 内置函数重写
 # ---------------------------------------------------------------------------
 func _init() -> void:
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
@@ -63,7 +63,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	# Ensure we receive gui input events
+	# 确保我们接收 GUI 输入事件
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_back_texture = load("res://assets/cards/back.png")
 	queue_redraw()
@@ -75,15 +75,15 @@ func _draw() -> void:
 	else:
 		_draw_face_down()
 
-	# Highlight overlay
+	# 高亮覆盖层
 	if is_highlighted:
 		_draw_highlight()
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# 公共 API
 # ---------------------------------------------------------------------------
-## Configures the card with the given suit and rank.
+## 使用给定的花色和点数配置纸牌。
 func set_card_data(new_suit: int, new_rank: int) -> void:
 	suit = new_suit
 	rank = new_rank
@@ -98,17 +98,17 @@ func set_card_data(new_suit: int, new_rank: int) -> void:
 	queue_redraw()
 
 
-## Flips the card between face-up and face-down.
+## 翻转纸牌（正反面切换）。
 func flip() -> void:
 	face_up = not face_up
 
 
-## Enables or disables the highlight overlay.
+## 启用或禁用高亮覆盖层。
 func set_highlight(enabled: bool) -> void:
 	is_highlighted = enabled
 
 
-## Returns the rank as a display string (A, 2–10, J, Q, K).
+## 返回点数的显示字符串（A, 2–10, J, Q, K）。
 func get_rank_string() -> String:
 	match rank:
 		1:  return "A"
@@ -118,7 +118,7 @@ func get_rank_string() -> String:
 		_:  return str(rank)
 
 
-## Returns the suit symbol (♠, ♥, ♦, ♣).
+## 返回花色符号（♠, ♥, ♦, ♣）。
 func get_suit_symbol() -> String:
 	match suit:
 		0: return "♠"
@@ -128,13 +128,13 @@ func get_suit_symbol() -> String:
 		_: return "?"
 
 
-## Returns true if this is a red suit (Hearts or Diamonds).
+## 如果此纸牌是红色花色（红桃或方块）则返回 true。
 func is_red() -> bool:
 	return suit == 1 or suit == 2
 
 
 # ---------------------------------------------------------------------------
-# Input handling
+# 输入处理
 # ---------------------------------------------------------------------------
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -148,72 +148,72 @@ func _gui_input(event: InputEvent) -> void:
 				if _is_dragging:
 					_is_dragging = false
 					card_drag_ended.emit(self)
-	# Touch events are emulated as mouse events via project.godot setting,
-	# so we don't need explicit InputEventScreenTouch handling here.
+	# 触摸事件通过 project.godot 设置模拟为鼠标事件，
+	# 因此这里不需要显式处理 InputEventScreenTouch。
 
 
 # ---------------------------------------------------------------------------
-# Drawing helpers
+# 绘制辅助函数
 # ---------------------------------------------------------------------------
 func _draw_face_up() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 
-	# Card shadow
+	# 纸牌阴影
 	var shadow_rect := Rect2(Vector2(2, 2), size)
 	_draw_rounded_rect_fill(shadow_rect, CORNER_RADIUS, Color(0, 0, 0, 0.25))
 
-	# White rounded background (slightly larger than texture to cover edges)
+	# 白色圆角背景（略大于纹理以覆盖边缘）
 	_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color.WHITE)
 
-	# Draw the face texture scaled to card size
+	# 绘制缩放到纸牌大小的正面纹理
 	if _face_texture != null:
 		draw_texture_rect(_face_texture, rect, false)
 
-	# Thin border overlay
+	# 细边框覆盖层
 	draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(0.25, 0.25, 0.25, 0.3), 0.5)
 
 
 func _draw_face_down() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 
-	# Card shadow
+	# 纸牌阴影
 	var shadow_rect := Rect2(Vector2(2, 2), size)
 	_draw_rounded_rect_fill(shadow_rect, CORNER_RADIUS, Color(0, 0, 0, 0.25))
 
-	# Draw the back texture scaled to card size
+	# 绘制缩放到纸牌大小的背面纹理
 	if _back_texture != null:
 		_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color.WHITE)
 		draw_texture_rect(_back_texture, rect, false)
 	else:
-		# Fallback: dark blue pattern
+		# 后备方案：深蓝色图案
 		_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color("#0c1f3d"))
 
 
 func _draw_highlight() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	# Semi-transparent golden glow overlay
+	# 半透明金色发光覆盖层
 	_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(1.0, 0.85, 0.2, 0.18))
 	draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(1.0, 0.9, 0.4, 0.6), 2.5)
-	# Inner thin bright line
+	# 内部细亮线
 	draw_rounded_rect_outline(rect.grow(-3), CORNER_RADIUS - 1, Color(1.0, 0.95, 0.6, 0.4), 1.0)
 
 
-## Fills a rounded rectangle with the given color.
+## 用给定颜色填充圆角矩形。
 func _draw_rounded_rect_fill(rect: Rect2, radius: float, color: Color) -> void:
 	var r: float = min(radius, min(rect.size.x * 0.5, rect.size.y * 0.5))
-	# Central rectangle
+	# 中心矩形
 	var inner := Rect2(rect.position + Vector2(r, 0), rect.size - Vector2(r * 2, 0))
 	draw_rect(inner, color)
 	var inner_v := Rect2(rect.position + Vector2(0, r), rect.size - Vector2(0, r * 2))
 	draw_rect(inner_v, color)
-	# Four corner circles
+	# 四个角圆
 	draw_circle(rect.position + Vector2(r, r), r, color)
 	draw_circle(rect.position + Vector2(rect.size.x - r, r), r, color)
 	draw_circle(rect.position + Vector2(rect.size.x - r, rect.size.y - r), r, color)
 	draw_circle(rect.position + Vector2(r, rect.size.y - r), r, color)
 
 
-## Draws a rounded rectangle outline using multiple draw_arc / draw_line calls.
+## 使用多个 draw_arc / draw_line 调用绘制圆角矩形轮廓。
 func draw_rounded_rect_outline(rect: Rect2, radius: float, color: Color, width: float) -> void:
 	var r: float = min(radius, min(rect.size.x * 0.5, rect.size.y * 0.5))
 	var tl := rect.position + Vector2(r, r)
@@ -221,13 +221,13 @@ func draw_rounded_rect_outline(rect: Rect2, radius: float, color: Color, width: 
 	var br := rect.position + rect.size - Vector2(r, r)
 	var bl := rect.position + Vector2(r, rect.size.y - r)
 
-	# Four straight edges
+	# 四条直边
 	draw_line(tl + Vector2(-r, 0), tr + Vector2(r, 0), color, width)
 	draw_line(tr + Vector2(0, -r), br + Vector2(0, r), color, width)
 	draw_line(br + Vector2(r, 0), bl + Vector2(-r, 0), color, width)
 	draw_line(bl + Vector2(0, r), tl + Vector2(0, -r), color, width)
 
-	# Four corner arcs
+	# 四个角弧线
 	var points := 8
 	_draw_arc(tl, r, PI, PI * 1.5, points, color, width)
 	_draw_arc(tr, r, PI * 1.5, TAU, points, color, width)

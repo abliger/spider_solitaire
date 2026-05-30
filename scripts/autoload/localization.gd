@@ -1,13 +1,14 @@
 extends Node
 
-## Singleton that provides string translations for all UI text.
+## 为所有 UI 文本提供字符串翻译的单例。
 
-signal locale_changed
+signal locale_changed  # 语言切换时发出 / Emitted when the active locale changes
 
-const FALLBACK_LOCALE := "en"
+const FALLBACK_LOCALE := "en"  # 默认回退语言 / Fallback locale when translation is missing
 
-var _current_locale: String = FALLBACK_LOCALE
+var _current_locale: String = FALLBACK_LOCALE  # 当前激活的语言 / Currently active locale
 
+# 翻译字典：支持英文和中文 / Translation dictionary supporting English and Chinese
 var _translations: Dictionary = {
 	"en": {
 		"title": "Spider Solitaire",
@@ -89,18 +90,18 @@ var _translations: Dictionary = {
 
 
 func _ready() -> void:
-	# Load saved locale on startup
+	# 启动时加载已保存的语言设置
 	_current_locale = SettingsData.locale
 
 
-## Returns the translated string for the given key.
-## If the key is not found, returns the key itself as fallback.
+## 返回给定键对应的翻译字符串。
+## 如果未找到该键，则返回键本身作为回退。
 func translate(key: String) -> String:
 	var dict: Dictionary = _translations.get(_current_locale, {})
 	return dict.get(key, key)
 
 
-## Changes the active locale and emits locale_changed.
+## 切换当前语言并发出 locale_changed 信号。
 func set_locale(locale: String) -> void:
 	if _current_locale == locale:
 		return
@@ -111,17 +112,17 @@ func set_locale(locale: String) -> void:
 	locale_changed.emit()
 
 
-## Returns the current locale code.
+## 返回当前的语言代码。
 func get_locale() -> String:
 	return _current_locale
 
 
-## Returns a list of supported locale codes.
+## 返回支持的语言代码列表。
 func get_supported_locales() -> Array:
 	return _translations.keys().duplicate()
 
 
-## Returns the display name for a locale code.
+## 返回语言代码对应的显示名称。
 func get_locale_display_name(locale: String) -> String:
 	match locale:
 		"en": return translate("lang_en")

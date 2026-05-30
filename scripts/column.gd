@@ -1,33 +1,35 @@
 class_name Column
 extends Control
 
-## Emitted after new cards are added to this column.
+## 当新纸牌被添加到此列后发出此信号。
 signal cards_added(added)
-## Emitted after cards are removed from this column.
+## 当纸牌从此列移除后发出此信号。
 signal cards_removed(removed)
 
 # ---------------------------------------------------------------------------
-# Layout constants
+# 布局常量
 # ---------------------------------------------------------------------------
 const CARD_WIDTH: int = 100
 const CARD_HEIGHT: int = 140
 const FACE_UP_OVERLAP: int = 56   # ~60% overlap → 40% visible = 56 px
+								  # ~60% 重叠 → 40% 可见 = 56 像素
 const FACE_DOWN_OVERLAP: int = 20 # Face-down cards overlap more (less visible)
+								  # 背面朝上的纸牌重叠更多（可见部分更少）
 
 # ---------------------------------------------------------------------------
-# Column state
+# 列状态
 # ---------------------------------------------------------------------------
-## The cards currently in this column, ordered bottom-to-top.
+## 当前在此列中的纸牌，按从底到顶排序。
 var _cards: Array[Card] = []
 
-## Area2D used for drop-target detection.
+## 用于放置目标检测的 Area2D。
 var drop_area: Area2D
 
 # ---------------------------------------------------------------------------
-# Built-in overrides
+# 内置函数重写
 # ---------------------------------------------------------------------------
 func _ready() -> void:
-	# Size is fixed to card width; height grows dynamically.
+	# 大小固定为纸牌宽度；高度动态增长。
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	drop_area = $DropArea
@@ -36,9 +38,9 @@ func _ready() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# 公共 API
 # ---------------------------------------------------------------------------
-## Appends an array of cards to the top of this column.
+## 将一组纸牌追加到此列的顶部。
 func add_cards(cards_array: Array[Card]) -> void:
 	if cards_array.is_empty():
 		return
@@ -47,7 +49,7 @@ func add_cards(cards_array: Array[Card]) -> void:
 		_disconnect_drag_signals(card)
 		_cards.append(card)
 		add_child(card)
-		# Ensure the card can receive input
+		# 确保纸牌可以接收输入
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		card.card_drag_started.connect(_on_card_drag_started)
 		card.card_drag_ended.connect(_on_card_drag_ended)
@@ -56,8 +58,8 @@ func add_cards(cards_array: Array[Card]) -> void:
 	cards_added.emit(cards_array.duplicate())
 
 
-## Removes and returns the top `count` cards from this column.
-## If `flip_revealed` is false, the newly exposed top card will not be flipped face-up.
+## 从此列移除并返回顶部 `count` 张纸牌。
+## 如果 `flip_revealed` 为 false，则新暴露的顶部纸牌不会被翻为正面朝上。
 func remove_cards(count: int, flip_revealed: bool = true) -> Array[Card]:
 	if count <= 0 or count > _cards.size():
 		return []
@@ -69,7 +71,7 @@ func remove_cards(count: int, flip_revealed: bool = true) -> Array[Card]:
 		remove_child(card)
 		removed.append(card)
 
-	# Flip the new top card face-up if it exists and is face-down
+	# 如果新顶部纸牌存在且背面朝上，则将其翻为正面朝上
 	if flip_revealed and not _cards.is_empty():
 		var top: Card = _cards[_cards.size() - 1]
 		if not top.face_up:
@@ -80,20 +82,20 @@ func remove_cards(count: int, flip_revealed: bool = true) -> Array[Card]:
 	return removed
 
 
-## Returns a shallow copy of all cards in this column (bottom-to-top).
+## 返回此列中所有纸牌的浅拷贝（从底到顶）。
 func get_cards() -> Array[Card]:
 	return _cards.duplicate()
 
 
-## Returns the top-most card, or null if the column is empty.
+## 返回最顶部的纸牌，如果列为空则返回 null。
 func get_top_card() -> Card:
 	if _cards.is_empty():
 		return null
 	return _cards[_cards.size() - 1]
 
 
-## Returns the longest movable sequence from the top of this column.
-## A movable sequence must be descending in rank and all the same suit.
+## 返回此列顶部最长的可移动序列。
+## 可移动序列必须点数递减且花色相同。
 func get_movable_sequence() -> Array[Card]:
 	if _cards.is_empty():
 		return []
@@ -107,23 +109,23 @@ func get_movable_sequence() -> Array[Card]:
 		else:
 			break
 
-	# Reverse so the result is top-to-bottom (same order as visual stacking)
+	# 反转使结果从上到下排列（与视觉堆叠顺序相同）
 	result.reverse()
 	return result
 
 
-## Returns the total number of cards in this column.
+## 返回此列中纸牌的总数。
 func get_card_count() -> int:
 	return _cards.size()
 
 
-## Returns true if this column is empty.
+## 如果此列为空则返回 true。
 func is_empty() -> bool:
 	return _cards.is_empty()
 
 
-## Removes a specific set of cards (used when dragging a sub-sequence).
-## If `flip_revealed` is false, the newly exposed top card will not be flipped face-up.
+## 移除特定的纸牌集合（用于拖拽子序列时）。
+## 如果 `flip_revealed` 为 false，则新暴露的顶部纸牌不会被翻为正面朝上。
 func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = true) -> void:
 	if cards_to_remove.is_empty():
 		return
@@ -135,7 +137,7 @@ func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = t
 			_disconnect_drag_signals(card)
 			remove_child(card)
 
-	# Flip new top card if needed
+	# 如果需要，翻开新的顶部纸牌
 	if flip_revealed and not _cards.is_empty():
 		var top: Card = _cards[_cards.size() - 1]
 		if not top.face_up:
@@ -146,9 +148,9 @@ func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = t
 
 
 # ---------------------------------------------------------------------------
-# Internal layout
+# 内部布局
 # ---------------------------------------------------------------------------
-## Repositions every card based on its index and face-up state.
+## 根据每张纸牌的索引和正面状态重新定位。
 func _reposition_cards() -> void:
 	var current_y: float = 0.0
 	for i in range(_cards.size()):
@@ -162,7 +164,7 @@ func _reposition_cards() -> void:
 	_set_dynamic_height()
 
 
-## Adjusts the column's minimum size so it can fit all stacked cards.
+## 调整列的最小大小以适应所有堆叠的纸牌。
 func _set_dynamic_height() -> void:
 	if _cards.is_empty():
 		custom_minimum_size.y = CARD_HEIGHT
@@ -171,13 +173,13 @@ func _set_dynamic_height() -> void:
 		for card in _cards:
 			total_overlap += FACE_UP_OVERLAP if card.face_up else FACE_DOWN_OVERLAP
 
-		# The last card contributes its full height, not just the overlap
+		# 最后一张纸牌贡献其完整高度，而不仅仅是重叠部分
 		custom_minimum_size.y = float(total_overlap - (FACE_UP_OVERLAP if _cards[_cards.size() - 1].face_up else FACE_DOWN_OVERLAP) + CARD_HEIGHT)
 	_update_drop_area()
 
 
 
-## Resizes the Area2D collision shape to match the column's current height.
+## 调整 Area2D 碰撞形状的大小以匹配列的当前高度。
 func _update_drop_area() -> void:
 	if drop_area == null:
 		return
@@ -199,7 +201,7 @@ func _on_card_drag_ended(_card: Card) -> void:
 	DragSystem.end_drag()
 
 
-## Removes any existing drag signal connections so moved cards always report to their current column.
+## 移除任何现有的拖拽信号连接，以便移动的纸牌始终向其当前列报告。
 func _disconnect_drag_signals(card: Card) -> void:
 	var my_drag_started := _on_card_drag_started
 	var my_drag_ended := _on_card_drag_ended

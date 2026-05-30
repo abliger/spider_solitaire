@@ -19,7 +19,7 @@ class CardData:
 		rank = r
 	
 	func can_place_on(other: CardData) -> bool:
-		# Spider solitaire: any suit, rank must be exactly one higher
+		# 蜘蛛纸牌：任意花色，点数必须恰好大 1
 		return other.rank == rank + 1
 	
 	func is_same_suit(other: CardData) -> bool:
@@ -46,8 +46,8 @@ class CardData:
 
 static func create_deck(num_suits: int) -> Array[CardData]:
 	var deck: Array[CardData] = []
-	# Spider Solitaire always uses 104 cards total.
-	# Number of decks depends on how many suits are used.
+	# 蜘蛛纸牌总共使用 104 张牌。
+	# 牌组数量取决于使用了多少种花色。
 	var decks := TOTAL_CARDS / (num_suits * RANKS)
 	for _i in range(decks):
 		for s in range(num_suits):
@@ -65,8 +65,8 @@ static func shuffle(deck: Array[CardData]) -> void:
 		deck[j] = temp
 
 static func get_movable_sequence(cards: Array[CardData]) -> Array[CardData]:
-	# Returns the longest sequence from the top that can be moved together
-	# Sequence must be descending and same suit
+	# 返回顶部可以一起移动的最长序列
+	# 序列必须点数递减且花色相同
 	if cards.is_empty():
 		return []
 	
@@ -85,7 +85,7 @@ static func is_valid_move(moving_cards: Array[CardData], target_cards: Array[Car
 		return false
 	
 	if target_cards.is_empty():
-		# Empty column: can only place a King or sequence starting with King
+		# 空列：只能放置 K 或以 K 开头的序列
 		return moving_cards[0].rank == 13
 	
 	var top_target := target_cards[target_cards.size() - 1]
@@ -95,7 +95,7 @@ static func is_valid_move(moving_cards: Array[CardData], target_cards: Array[Car
 	return moving_cards[0].can_place_on(top_target)
 
 static func find_complete_sequence(cards: Array[CardData]) -> int:
-	# Returns the starting index of a K->A complete same-suit sequence, or -1
+	# 返回 K->A 完整同花色序列的起始索引，如果没有则返回 -1
 	if cards.size() < 13:
 		return -1
 	
@@ -124,8 +124,8 @@ static func find_complete_sequence(cards: Array[CardData]) -> int:
 	return -1
 
 static func has_any_valid_move(columns: Array) -> bool:
-	# Check if any valid move exists on the board.
-	# Expects an array of Column nodes.
+	# 检查面板上是否存在任何合法移动。
+	# 期望一个 Column 节点数组。
 	for from_col in range(columns.size()):
 		var col = columns[from_col]
 		if col == null or not col.has_method("get_cards"):
@@ -157,7 +157,7 @@ static func _cards_to_data(cards: Array) -> Array[CardData]:
 		if card is CardData:
 			result.append(card)
 		elif ("suit" in card) and ("rank" in card):
-			# Convert from Card node to CardData
+			# 将 Card 节点转换为 CardData
 			var data := CardData.new(card.suit, card.rank)
 			if "face_up" in card:
 				data.face_up = card.face_up
