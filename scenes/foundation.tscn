@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8j1a2t8g2k1y"]
+
+[ext_resource type="Script" path="res://scripts/foundation.gd" id="1_def456"]
+
+[node name="Foundation" type="Control"]
+custom_minimum_size = Vector2(900, 140)
+script = ExtResource("1_def456")

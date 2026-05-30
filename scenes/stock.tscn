@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://bjl6a2t8g2k1x"]
+
+[ext_resource type="Script" path="res://scripts/stock.gd" id="1_abc123"]
+
+[node name="Stock" type="Control"]
+custom_minimum_size = Vector2(100, 140)
+script = ExtResource("1_abc123")
