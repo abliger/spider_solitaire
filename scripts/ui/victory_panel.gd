@@ -61,7 +61,7 @@ func _process(delta: float) -> void:
 	# 计算弹性 bounce 效果：前半段放大，后半段回弹
 	var bounce := 1.0 + 0.2 * sin(t * PI * 2.0) * (1.0 - t)
 	var scale_val := ease_out_back(t) * bounce
-	title_label.scale = Vector2(scale_val, scale_val)
+	title_label.scale = _title_base_scale * scale_val
 
 	# 动画完成后停止处理
 	if t >= 1.0:

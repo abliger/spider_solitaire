@@ -78,6 +78,8 @@ static func get_movable_sequence(cards: Array[CardData]) -> Array[CardData]:
 			result.append(current)
 		else:
 			break
+	# 反转使结果从上到下排列（与 Column.get_movable_sequence 保持一致）
+	result.reverse()
 	return result
 
 static func is_valid_move(moving_cards: Array[CardData], target_cards: Array[CardData]) -> bool:

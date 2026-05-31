@@ -156,6 +156,14 @@ func _gui_input(event: InputEvent) -> void:
 	# 因此这里不需要显式处理 InputEventScreenTouch。
 
 
+func _notification(what: int) -> void:
+	# 鼠标移出纸牌区域时重置拖拽状态，防止状态泄漏
+	if what == NOTIFICATION_MOUSE_EXIT:
+		if _is_dragging:
+			_is_dragging = false
+			card_drag_ended.emit(self)
+
+
 # ---------------------------------------------------------------------------
 # 绘制辅助函数
 # ---------------------------------------------------------------------------
