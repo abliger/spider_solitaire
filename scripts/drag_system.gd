@@ -17,6 +17,7 @@ var _drag_offset: Vector2 = Vector2.ZERO
 var _is_dragging: bool = false
 var _touch_pos: Vector2 = Vector2.ZERO
 var _using_touch: bool = false
+var _return_tween: Tween = null
 
 
 func _ready() -> void:
@@ -35,8 +36,15 @@ func register_board(board: Board) -> void:
 
 ## 强制立即结束任何活跃的拖拽（无动画）。重置面板时使用。
 func force_end_drag() -> void:
-	if not _is_dragging:
+	# 终止可能正在运行的返回动画 tween
+	if _return_tween != null:
+		_return_tween.kill()
+		_return_tween = null
+
+	# 如果没有正在拖拽且没有残留的返回动画牌，直接返回
+	if not _is_dragging and _dragged_cards.is_empty():
 		return
+
 	_is_dragging = false
 	for card in _dragged_cards:
 		if is_instance_valid(card):
@@ -62,8 +70,14 @@ func start_drag(source_column: Column, card: Card) -> void:
 	if movable.is_empty() or not card in movable:
 		return
 
+	# 只移动从点击的牌开始到顶部的子序列，而不是整串可移动牌。
+	# 例如 movable = [K, Q, J]，点击 Q 则只移动 [Q, J]。
+	var card_index := movable.find(card)
+	if card_index == -1:
+		return
+
 	_source_column = source_column
-	_dragged_cards = movable.duplicate()
+	_dragged_cards = movable.slice(card_index, movable.size())
 	_original_positions.clear()
 
 	var input_pos := _get_input_position()
@@ -199,15 +213,16 @@ func _reparent_to_source_immediate() -> void:
 
 ## 将纸牌动画回到源列中的原始位置。
 func _animate_to_original() -> void:
-	var tween := create_tween()
-	tween.set_parallel(true)
+	_return_tween = create_tween()
+	_return_tween.set_parallel(true)
 	for i in range(_dragged_cards.size()):
 		var card: Card = _dragged_cards[i]
-		tween.tween_property(card, "position", _original_positions[i], 0.25) \
+		_return_tween.tween_property(card, "position", _original_positions[i], 0.25) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 
-	await tween.finished
+	await _return_tween.finished
+	_return_tween = null
 	if is_instance_valid(_source_column):
 		_source_column._reposition_cards()
 	_cleanup_drag()
