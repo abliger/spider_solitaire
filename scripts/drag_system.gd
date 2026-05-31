@@ -158,7 +158,12 @@ func _detect_column_at_position(pos: Vector2) -> Column:
 
 	var space_state := get_viewport().world_2d.direct_space_state
 	var query := PhysicsPointQueryParameters2D.new()
-	query.position = pos
+	# 将视口坐标转换为世界坐标，以兼容 Camera2D
+	var camera := get_viewport().get_camera_2d()
+	if camera:
+		query.position = camera.get_canvas_transform().affine_inverse() * pos
+	else:
+		query.position = pos
 	query.collision_mask = 2  # Columns are on layer 2
 	# 列位于碰撞层 2
 	query.collide_with_areas = true
@@ -221,5 +226,7 @@ func _cleanup_drag() -> void:
 func _cards_to_data(cards: Array[Card]) -> Array[RulesEngine.CardData]:
 	var result: Array[RulesEngine.CardData] = []
 	for card in cards:
-		result.append(RulesEngine.CardData.new(card.suit, card.rank))
+		var data := RulesEngine.CardData.new(card.suit, card.rank)
+		data.face_up = card.face_up
+		result.append(data)
 	return result

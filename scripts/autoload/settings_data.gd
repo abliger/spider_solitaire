@@ -62,19 +62,15 @@ func _load_settings() -> void:
 			best_scores = loaded_scores
 
 func update_best_score(difficulty: int, new_score: int, time: int, moves: int) -> void:
-	# 更新指定难度的最佳记录（分数更高、时间更短、步数更少即更新）
+	# 更新指定难度的最佳记录：以分数为首要指标，同分时取时间/步数更优者
 	var key := "difficulty_%d" % difficulty
 	var current = best_scores.get(key, {"score": 0, "time": 99999, "moves": 99999})
-	var updated := false
+	var should_update := false
 	if new_score > current["score"]:
-		current["score"] = new_score
-		updated = true
-	if time < current["time"]:
-		current["time"] = time
-		updated = true
-	if moves < current["moves"]:
-		current["moves"] = moves
-		updated = true
-	if updated:
-		best_scores[key] = current
+		should_update = true
+	elif new_score == current["score"]:
+		if time < current["time"] or moves < current["moves"]:
+			should_update = true
+	if should_update:
+		best_scores[key] = {"score": new_score, "time": time, "moves": moves}
 		_save_settings()

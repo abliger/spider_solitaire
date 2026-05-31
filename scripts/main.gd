@@ -115,27 +115,35 @@ func _on_undo_pressed() -> void:
 	if record == null:
 		return
 	SoundManager.play_sfx("click")
-	# 将纸牌移回，不记录历史、跳过规则检查、不翻转翻开的纸牌
+
+	# 1. 先还回完成的序列牌（如果有）
+	for seq_info in record.completed_sequences:
+		foundation.remove_completed_sequence()
+		if board.foundations.size() > 0:
+			board.foundations.pop_back()
+		var seq_col: Column = board.columns[seq_info.column_index]
+		if is_instance_valid(seq_col):
+			seq_col.add_cards(seq_info.cards)
+
+	# 2. 将玩家手动移动的纸牌移回，不记录历史、跳过规则检查、不翻转翻开的纸牌
 	board.move_cards(record.to_column, record.from_column, record.cards_moved.size(), false, true, false, false)
+	GameState.move_count -= 1  # 抵消 move_cards 内部的 increment_move
 	GameState.add_score(-record.score_delta)
 
-	# 如果原始移动中翻开了某张牌，则将其翻回背面
+	# 3. 如果原始移动中翻开了某张牌，则将其翻回背面
 	if record.flipped_card:
 		var col: Column = board.columns[record.from_column]
 		if is_instance_valid(col):
-			var flipped_idx := col.get_card_count() - record.cards_moved.size() - 1
+			# 如果 from_column 还回了序列牌，需要调整索引
+			var extra_cards := 0
+			for seq_info in record.completed_sequences:
+				if seq_info.column_index == record.from_column:
+					extra_cards += seq_info.cards.size()
+			var flipped_idx := col.get_card_count() - record.cards_moved.size() - 1 - extra_cards
 			if flipped_idx >= 0:
 				var cards := col.get_cards()
 				if flipped_idx < cards.size():
 					cards[flipped_idx].face_up = false
-
-	# 如果完成了序列，撤销基础区的进度
-	for i in range(record.sequences_completed):
-		foundation.remove_completed_sequence()
-		# 从基础区移除序列纸牌并将其返回面板
-		# （它们已经通过上面的 board.move_cards 移回，所以只需清理 foundations 数组）
-		if board.foundations.size() > 0:
-			board.foundations.pop_back()
 
 func _on_hint_pressed() -> void:
 	# TODO: 实现提示高亮

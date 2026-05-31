@@ -25,6 +25,9 @@ var _cards: Array[Card] = []
 ## 用于放置目标检测的 Area2D。
 var drop_area: Area2D
 
+## 记录最近一次 remove_cards / remove_specific_cards 时翻开的牌。
+var last_revealed_card: Card = null
+
 # ---------------------------------------------------------------------------
 # 内置函数重写
 # ---------------------------------------------------------------------------
@@ -33,6 +36,12 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	drop_area = $DropArea
+	
+	# 创建独立的碰撞形状副本，避免多个 Column 实例共享同一个 RectangleShape2D。
+	var shape_node: CollisionShape2D = drop_area.get_node_or_null("CollisionShape2D")
+	if shape_node != null and shape_node.shape != null:
+		shape_node.shape = shape_node.shape.duplicate()
+	
 	_update_drop_area()
 	_set_dynamic_height()
 
@@ -72,10 +81,12 @@ func remove_cards(count: int, flip_revealed: bool = true) -> Array[Card]:
 		removed.append(card)
 
 	# 如果新顶部纸牌存在且背面朝上，则将其翻为正面朝上
+	last_revealed_card = null
 	if flip_revealed and not _cards.is_empty():
 		var top: Card = _cards[_cards.size() - 1]
 		if not top.face_up:
 			top.flip()
+			last_revealed_card = top
 
 	_reposition_cards()
 	cards_removed.emit(removed.duplicate())
@@ -92,6 +103,16 @@ func get_top_card() -> Card:
 	if _cards.is_empty():
 		return null
 	return _cards[_cards.size() - 1]
+
+
+## 返回下一张要添加的纸牌应该放置的本地位置。
+func get_next_card_position() -> Vector2:
+	var current_y: float = 0.0
+	for i in range(_cards.size()):
+		var card: Card = _cards[i]
+		var overlap: int = FACE_UP_OVERLAP if card.face_up else FACE_DOWN_OVERLAP
+		current_y += overlap
+	return Vector2(0, current_y)
 
 
 ## 返回此列顶部最长的可移动序列。
@@ -138,10 +159,12 @@ func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = t
 			remove_child(card)
 
 	# 如果需要，翻开新的顶部纸牌
+	last_revealed_card = null
 	if flip_revealed and not _cards.is_empty():
 		var top: Card = _cards[_cards.size() - 1]
 		if not top.face_up:
 			top.flip()
+			last_revealed_card = top
 
 	_reposition_cards()
 	cards_removed.emit(cards_to_remove.duplicate())
@@ -189,6 +212,7 @@ func _update_drop_area() -> void:
 	var shape: RectangleShape2D = shape_node.shape
 	if shape == null:
 		return
+	
 	shape.size = Vector2(CARD_WIDTH, custom_minimum_size.y)
 	shape_node.position = Vector2(CARD_WIDTH / 2.0, custom_minimum_size.y / 2.0)
 

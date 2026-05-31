@@ -15,6 +15,11 @@ signal pause_pressed  # 暂停按钮被按下 / Pause button pressed
 @onready var pause_button: Button = $TopBar/ButtonsContainer/PauseButton
 
 func _ready() -> void:
+	# HUD 是全屏控件，必须设为 IGNORE，否则它会拦截所有 _gui_input
+	# 事件，导致 Board/Card/Stock 永远收不到点击。
+	# TopBar（Panel，默认 STOP）和 Button（默认 STOP）仍然能正常接收事件。
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	# 监听语言切换，更新所有 UI 文本
 	Localization.locale_changed.connect(_update_ui_text)
 	_update_ui_text()

@@ -9,6 +9,7 @@ class MoveRecord:
 	var flipped_card: bool
 	var sequences_completed: int
 	var score_delta: int
+	var completed_sequences: Array = []
 
 	func _init(
 		p_from: int,
@@ -61,13 +62,14 @@ func clear() -> void:
 
 
 ## 使用附加信息更新最近的移动记录。
-func update_last_record(flipped_card: bool, sequences_completed: int, score_delta: int) -> void:
+func update_last_record(flipped_card: bool, sequences_completed: int, score_delta: int, completed_sequences: Array = []) -> void:
 	if _history.is_empty():
 		return
 	var record: MoveRecord = _history[_history.size() - 1]
 	record.flipped_card = flipped_card
 	record.sequences_completed = sequences_completed
 	record.score_delta += score_delta
+	record.completed_sequences = completed_sequences
 
 
 ## 返回已记录的移动数量。

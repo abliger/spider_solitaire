@@ -84,9 +84,16 @@ static func is_valid_move(moving_cards: Array[CardData], target_cards: Array[Car
 	if moving_cards.is_empty():
 		return false
 	
+	# 验证整串牌是合法的同花色递减序列
+	for i in range(moving_cards.size() - 1):
+		var current := moving_cards[i]
+		var next := moving_cards[i + 1]
+		if not current.is_same_suit(next) or next.rank != current.rank - 1:
+			return false
+	
 	if target_cards.is_empty():
-		# 空列：只能放置 K 或以 K 开头的序列
-		return moving_cards[0].rank == 13
+		# 空列：可以放置任意牌或牌串
+		return true
 	
 	var top_target := target_cards[target_cards.size() - 1]
 	if not top_target.face_up:

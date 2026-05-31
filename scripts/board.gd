@@ -18,6 +18,7 @@ signal game_won
 
 @onready var columns_container: Control = $ColumnsContainer
 @onready var stock_count_label: Label = $StockCountLabel
+@onready var stock_node: Stock = $Stock
 
 # ---------------------------------------------------------------------------
 # 布局常量
@@ -51,6 +52,9 @@ var foundations: Array[Array] = []
 
 ## 当前难度（影响花色数量）。
 var current_difficulty: int = 1
+
+## 是否正在执行发牌动画，防止重复点击。
+var _is_dealing: bool = false
 
 # ---------------------------------------------------------------------------
 # 内置函数重写
@@ -131,19 +135,57 @@ func deal_from_stock() -> bool:
 	for col in columns:
 		if col.is_empty():
 			return false
+	if _is_dealing:
+		return false
 
+	_is_dealing = true
+
+	var stock_global_pos := stock_node.global_position
 	var dealt: Array[Card] = []
-	for col in columns:
+	var target_positions: Array[Vector2] = []
+
+	for col_idx in range(columns.size()):
+		var col = columns[col_idx]
 		var card = stock.pop_back()
 		card.face_up = true
-		col.add_cards([card])
 		dealt.append(card)
+
+		# 先计算目标本地位置，再加入列
+		var target_local := col.get_next_card_position()
+		col.add_cards([card])
+
+		# 记录目标全局位置
+		target_positions.append(card.global_position)
+
+		# 将牌重置到牌堆位置作为动画起点
+		card.global_position = stock_global_pos
+		# 临时提高 z_index，确保飞行动画可见
+		card.z_index = 100 + col_idx
+
+	# 创建并发 tween，从左到右依次延迟
+	var tween := create_tween()
+	tween.set_parallel(true)
+
+	for i in range(dealt.size()):
+		var card = dealt[i]
+		var target_pos = target_positions[i]
+		var card_tween := tween.tween_property(card, "global_position", target_pos, 0.2)
+		card_tween.set_delay(i * 0.06)
+		card_tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+	tween.finished.connect(func():
+		if not is_instance_valid(self):
+			return
+		for col in columns:
+			col._reposition_cards()
+		_check_all_columns_for_sequences()
+		_is_dealing = false
+		stock_dealt.emit(dealt)
+	)
 
 	GameState.increment_move()
 	SoundManager.play_sfx("deal")
 	_update_stock_label()
-	stock_dealt.emit(dealt)
-	_check_all_columns_for_sequences()
 	return true
 
 
@@ -175,15 +217,12 @@ func move_cards(from_col: int, to_col: int, count: int, record_history: bool = t
 			SoundManager.play_sfx("error")
 			return false
 
-	# 检查源列顶部是否有一张背面朝上的纸牌（移除后可能会被翻开）
-	var source_had_face_down_top := false
-	var source_top: Card = source.get_top_card()
-	if source_top != null and not source_top.face_up:
-		source_had_face_down_top = true
-
 	# 执行移动
 	var removed = source.remove_cards(count, flip_revealed)
+	removed.reverse()
 	target.add_cards(removed)
+
+	var source_flipped := source.last_revealed_card != null
 
 	GameState.increment_move()
 	GameState.add_score(-1)
@@ -196,11 +235,11 @@ func move_cards(from_col: int, to_col: int, count: int, record_history: bool = t
 
 	# 移动后检查是否有完成的序列
 	if check_sequences:
-		var sequences_found := _check_all_columns_for_sequences()
+		var seq_result := _check_all_columns_for_sequences()
 		if record != null:
-			if sequences_found > 0:
-				MoveHistory.update_last_record(source_had_face_down_top, sequences_found, sequences_found * 100)
-			elif source_had_face_down_top:
+			if seq_result.count > 0:
+				MoveHistory.update_last_record(source_flipped, seq_result.count, seq_result.count * 100, seq_result.sequences)
+			elif source_flipped:
 				MoveHistory.update_last_record(true, 0, 0)
 
 	return true
@@ -241,15 +280,11 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 			SoundManager.play_sfx("error")
 			return false
 
-	# 检查源列顶部是否有一张背面朝上的纸牌（移除后可能会被翻开）
-	var source_had_face_down_top := false
-	var source_top: Card = source.get_top_card()
-	if source_top != null and not source_top.face_up:
-		source_had_face_down_top = true
-
 	# 执行移动
 	source.remove_specific_cards(cards, flip_revealed)
 	target.add_cards(cards)
+
+	var source_flipped := source.last_revealed_card != null
 
 	GameState.increment_move()
 	GameState.add_score(-1)
@@ -262,11 +297,11 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 
 	# 移动后检查是否有完成的序列
 	if check_sequences:
-		var sequences_found := _check_all_columns_for_sequences()
+		var seq_result := _check_all_columns_for_sequences()
 		if record != null:
-			if sequences_found > 0:
-				MoveHistory.update_last_record(source_had_face_down_top, sequences_found, sequences_found * 100)
-			elif source_had_face_down_top:
+			if seq_result.count > 0:
+				MoveHistory.update_last_record(source_flipped, seq_result.count, seq_result.count * 100, seq_result.sequences)
+			elif source_flipped:
 				MoveHistory.update_last_record(true, 0, 0)
 
 	return true
@@ -280,9 +315,10 @@ func check_for_complete_sequence() -> void:
 	_check_all_columns_for_sequences()
 
 
-func _check_all_columns_for_sequences() -> int:
-	var found_count := 0
-	for col in columns:
+func _check_all_columns_for_sequences() -> Dictionary:
+	var result := {"count": 0, "sequences": []}
+	for col_idx in range(columns.size()):
+		var col = columns[col_idx]
 		while true:
 			var cards = col.get_cards()
 			var card_data = _cards_to_data(cards)
@@ -302,14 +338,15 @@ func _check_all_columns_for_sequences() -> int:
 			GameState.add_score(100)
 			SoundManager.play_sfx("win")
 			sequence_completed.emit(sequence)
-			found_count += 1
+			result.count += 1
+			result.sequences.append({"column_index": col_idx, "cards": sequence.duplicate()})
 
 			# 检查是否全局胜利
 			if foundations.size() >= NUM_FOUNDATIONS:
 				GameState.end_game()
 				game_won.emit()
-				return found_count
-	return found_count
+				return result
+	return result
 
 
 # ---------------------------------------------------------------------------
@@ -405,3 +442,4 @@ func _clear_board() -> void:
 	foundations.clear()
 
 	_update_stock_label()
+	_is_dealing = false
