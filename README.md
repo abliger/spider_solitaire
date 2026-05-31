@@ -1,75 +1,114 @@
-# Spider Solitaire
+# 蜘蛛纸牌 (Spider Solitaire)
 
-A classic Spider Solitaire card game built with **Godot 4.3+** and **GDScript**.
+使用 **Godot 4.3+** 和 **GDScript** 开发的经典蜘蛛纸牌游戏。
 
-## Features
+## 功能特性
 
-- **3 Difficulty Levels**: Easy (1 suit), Medium (2 suits), Hard (4 suits)
-- **Drag & Drop**: Smooth card dragging with touch and mouse support
-- **Undo**: Unlimited undo with full move history
-- **Cross-Platform**: Target iOS, iPadOS, Android, Windows, macOS, Linux
-- **Clean UI**: Custom-drawn cards, green felt table, responsive menus
+- **三种难度**：初级（单色）、中级（双色）、高级（四色）
+- **拖拽操作**：支持鼠标拖拽和触屏滑动
+- **无限撤销**：完整记录每一步操作，可随时回退
+- **计分系统**：开局 500 分，完成序列 +100 分，每步 -1 分
+- **跨平台**：支持 iOS、iPadOS、Android、Windows、macOS、Linux
+- **精美界面**：自定义卡牌绘制、绿色桌布、响应式菜单
 
-## Project Structure
+## 游戏规则
+
+### 牌局设置
+
+- 使用 **两副牌**，共 **104 张**
+- 桌面有 **10 列** 牌：
+  - 前 **4 列**，每列 **6 张**
+  - 后 **6 列**，每列 **5 张**
+- 每列只有最上面 **1 张** 正面朝上，其余背面朝下
+- 右下角发牌堆有 **50 张** 备用牌
+
+### 移动规则
+
+- **单张移动**：将一张牌移到比它大 **1 点** 的牌上（任意花色均可）
+- **整串移动**：同花色、点数连续递减的整串牌可以一起拖动
+- **空列规则**：空列可以放入**任意牌或牌串**
+- **发牌**：点击右下角发牌堆，每列发 1 张牌（前提是 10 列都不能为空）
+- **自动翻牌**：移走一列所有明牌后，最上面的暗牌自动翻开
+
+### 胜利条件
+
+- 将同花色牌按 **K→Q→J→10→9→8→7→6→5→4→3→2→A** 的顺序排成完整序列
+- 每完成一组 **13 张** 的 K→A 同花色序列，该组牌会被自动移除
+- 完成 **8 组** 完整序列即可获胜
+
+### 计分规则
+
+| 操作 | 分数变化 |
+|------|---------|
+| 开局 | +500 |
+| 每次移动 | -1 |
+| 完成一组 K→A 序列 | +100 |
+| 撤销 | 扣除该步已扣的 1 分（净效果）|
+
+## 操作方式
+
+| 操作 | 鼠标 | 触屏 |
+|------|------|------|
+| 选中 / 拖拽 | 左键按住拖动 | 按住拖动 |
+| 发牌 | 点击右下角牌堆 | 点击右下角牌堆 |
+| 撤销 | 点击顶部「撤销」按钮 | 点击顶部「撤销」按钮 |
+| 暂停 | 点击顶部「暂停」按钮 | 点击顶部「暂停」按钮 |
+
+## 项目结构
 
 ```
 spider_solitaire/
-├── project.godot              # Godot project config
-├── scenes/                    # Godot scenes (.tscn)
-│   ├── main.tscn              # Root game manager scene
-│   ├── card.tscn              # Single card
-│   ├── column.tscn            # Card column (drop target)
-│   ├── stock.tscn             # Deal pile
-│   ├── foundation.tscn        # Completed sequences area
-│   └── ui/                    # Menu & HUD scenes
-├── scripts/                   # GDScript source
-│   ├── autoload/              # Singletons (GameState, Settings, Sound)
-│   ├── card.gd                # Card rendering & input
-│   ├── column.gd              # Column logic
-│   ├── board.gd               # Game board & setup
-│   ├── drag_system.gd         # Drag-and-drop handler
-│   ├── rules_engine.gd        # Spider solitaire rules
-│   ├── move_history.gd        # Undo stack
-│   ├── main.gd                # Scene flow manager
-│   └── ui/                    # UI controllers
-└── assets/sounds/             # Sound effects (placeholders)
+├── project.godot              # Godot 项目配置
+├── scenes/                    # Godot 场景文件 (.tscn)
+│   ├── main.tscn              # 根场景（游戏管理器）
+│   ├── card.tscn              # 单张纸牌
+│   ├── column.tscn            # 纸牌列（放置区域）
+│   ├── stock.tscn             # 发牌堆
+│   ├── foundation.tscn        # 完成序列区域
+│   └── ui/                    # 菜单与 HUD 场景
+├── scripts/                   # GDScript 源代码
+│   ├── autoload/              # 单例（游戏状态、设置、音效）
+│   ├── card.gd                # 纸牌渲染与输入
+│   ├── column.gd              # 列逻辑
+│   ├── board.gd               # 游戏面板与发牌
+│   ├── drag_system.gd         # 拖拽系统
+│   ├── rules_engine.gd        # 蜘蛛纸牌规则引擎
+│   ├── move_history.gd        # 撤销记录栈
+│   ├── main.gd                # 场景流程管理
+│   └── ui/                    # UI 控制器
+└── assets/                    # 资源文件
+    ├── cards/                 # 卡牌素材（正反面）
+    ├── sounds/                # 音效
+    ├── textures/              # 背景纹理
+    └── fonts/                 # 字体
 ```
 
-## How to Run
+## 运行方式
 
-1. Open Godot 4.3+ Project Manager
-2. Click **Import** and select `project.godot`
-3. Press **F5** or click the play button
+1. 打开 **Godot 4.3+ 项目管理器**
+2. 点击 **导入**，选择本项目目录下的 `project.godot`
+3. 按 **F5** 或点击播放按钮运行
 
-## How to Export
+## 导出方式
 
 ### iOS / iPadOS
-1. Project → Export → Add Preset → iOS
-2. Configure bundle ID, icons, and signing
-3. Export Xcode project and build with Xcode
+1. 项目 → 导出 → 添加预设 → iOS
+2. 配置 Bundle ID、图标和签名
+3. 导出 Xcode 项目后在 Xcode 中编译
 
 ### Android
-1. Project → Export → Add Preset → Android
-2. Install Android build template if needed
-3. Export APK or AAB
+1. 项目 → 导出 → 添加预设 → Android
+2. 如需则安装 Android 构建模板
+3. 导出 APK 或 AAB
 
-### Desktop
-1. Project → Export → Add Preset → Windows / macOS / Linux
-2. Export directly
+### 桌面端
+1. 项目 → 导出 → 添加预设 → Windows / macOS / Linux
+2. 直接导出
 
-## Game Rules
+## 技术说明
 
-- Build descending sequences of cards (any suit)
-- Complete **K→A same-suit sequences** to clear them
-- Click the **Stock** to deal 1 card to each column (no empty columns allowed)
-- Use **Undo** to reverse any move
-- Try to win with the highest score!
-
-## Controls
-
-| Action | Mouse | Touch |
-|--------|-------|-------|
-| Select / Drag | Left-click & drag | Tap & drag |
-| Deal | Click Stock | Tap Stock |
-| Undo | Click Undo button | Tap Undo button |
-| Pause | Click Pause button | Tap Pause button |
+- **引擎**：Godot 4.3+
+- **语言**：GDScript
+- **渲染**：2D Canvas，自定义 `_draw()` 绘制纸牌
+- **物理**：使用 `PhysicsPointQueryParameters2D` 实现列碰撞检测
+- **输入**：同时支持 `_gui_input`（纸牌点击）和 `_input`（全局拖拽释放）
