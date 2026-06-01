@@ -140,11 +140,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed:
-				# 忽略双击的第二次按下，避免快速连续的 start_drag / end_drag
+			if mb.double_click:
+				# 忽略双击的所有阶段，避免快速连续的 start_drag / end_drag
 				# 导致 tween 动画互相冲突，纸牌被移到错误位置。
-				if mb.double_click:
-					return
+				_is_dragging = false
+				return
+			if mb.pressed:
 				card_clicked.emit(self)
 				_is_dragging = true
 				card_drag_started.emit(self)

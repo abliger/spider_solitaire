@@ -9,6 +9,7 @@ signal settings_changed  # 设置项发生变化 / A setting has changed
 @onready var panel: Panel = $CenterContainer/Panel
 @onready var sound_toggle: CheckBox = $CenterContainer/Panel/VBoxContainer/SoundToggle
 @onready var music_toggle: CheckBox = $CenterContainer/Panel/VBoxContainer/MusicToggle
+@onready var fullscreen_toggle: CheckBox = $CenterContainer/Panel/VBoxContainer/FullscreenToggle
 @onready var difficulty_label: Label = $CenterContainer/Panel/VBoxContainer/DifficultyLabel
 @onready var difficulty_option: OptionButton = $CenterContainer/Panel/VBoxContainer/DifficultyOption
 @onready var language_label: Label = $CenterContainer/Panel/VBoxContainer/LanguageLabel
@@ -20,6 +21,7 @@ func _ready() -> void:
 	# 连接所有设置控件的交互信号
 	sound_toggle.toggled.connect(_on_sound_toggled)
 	music_toggle.toggled.connect(_on_music_toggled)
+	fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
 	difficulty_option.item_selected.connect(_on_difficulty_selected)
 	language_option.item_selected.connect(_on_language_selected)
 	back_button.pressed.connect(func(): back_pressed.emit())
@@ -31,6 +33,7 @@ func show_settings() -> void:
 	visible = true
 	sound_toggle.button_pressed = SettingsData.sound_enabled
 	music_toggle.button_pressed = SettingsData.music_enabled
+	fullscreen_toggle.button_pressed = SettingsData.fullscreen
 	_update_ui_text()
 
 	# 填充并选中默认难度下拉框
@@ -79,6 +82,11 @@ func _on_music_toggled(enabled: bool) -> void:
 	else:
 		SoundManager.stop_music()
 
+func _on_fullscreen_toggled(enabled: bool) -> void:
+	# 切换全屏开关
+	SettingsData.fullscreen = enabled
+	settings_changed.emit()
+
 func _on_difficulty_selected(index: int) -> void:
 	# 根据下拉框索引映射到实际难度值并保存
 	var difficulty: int = 1
@@ -107,6 +115,7 @@ func _update_ui_text() -> void:
 	$CenterContainer/Panel/VBoxContainer/TitleLabel.text = Localization.translate("settings_title")
 	sound_toggle.text = Localization.translate("sound_effects")
 	music_toggle.text = Localization.translate("music")
+	fullscreen_toggle.text = Localization.translate("fullscreen")
 	difficulty_label.text = Localization.translate("default_difficulty")
 	language_label.text = Localization.translate("language")
 	back_button.text = Localization.translate("back")

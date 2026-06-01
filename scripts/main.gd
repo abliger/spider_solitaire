@@ -146,8 +146,9 @@ func _on_undo_pressed() -> void:
 					cards[flipped_idx].face_up = false
 
 func _on_hint_pressed() -> void:
-	# TODO: 实现提示高亮
-	SoundManager.play_sfx("click")
+	if not GameState.is_game_active:
+		return
+	board.show_hint()
 
 func _on_pause_pressed() -> void:
 	GameState.is_game_active = false
@@ -185,6 +186,7 @@ func _on_settings_back() -> void:
 
 func _on_return_to_main_menu() -> void:
 	GameState.reset_game()
+	board._clear_board()
 	_show_main_menu()
 
 

@@ -28,6 +28,16 @@ var drop_area: Area2D
 ## 记录最近一次 remove_cards / remove_specific_cards 时翻开的牌。
 var last_revealed_card: Card = null
 
+## 列的最大可见高度。当纸牌堆叠总高度超过此值时自动压缩间距。
+## Maximum visible height for the column; overlaps are auto-scaled down when exceeded.
+var max_column_height: float = 0.0
+
+## 是否高亮显示（用于提示目标列）。
+var is_highlighted: bool = false:
+	set(value):
+		is_highlighted = value
+		queue_redraw()
+
 # ---------------------------------------------------------------------------
 # 内置函数重写
 # ---------------------------------------------------------------------------
@@ -56,8 +66,13 @@ func add_cards(cards_array: Array[Card]) -> void:
 
 	for card in cards_array:
 		_disconnect_drag_signals(card)
-		_cards.append(card)
-		add_child(card)
+		if not _cards.has(card):
+			_cards.append(card)
+		if card.get_parent() != null and card.get_parent() != self:
+			card.get_parent().remove_child(card)
+		if card.get_parent() != self:
+			add_child(card)
+		card.visible = true
 		# 确保纸牌可以接收输入
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		card.card_drag_started.connect(_on_card_drag_started)
@@ -107,11 +122,10 @@ func get_top_card() -> Card:
 
 ## 返回下一张要添加的纸牌应该放置的本地位置。
 func get_next_card_position() -> Vector2:
+	var overlaps := _get_compressed_overlaps()
 	var current_y: float = 0.0
-	for i in range(_cards.size()):
-		var card: Card = _cards[i]
-		var overlap: int = FACE_UP_OVERLAP if card.face_up else FACE_DOWN_OVERLAP
-		current_y += overlap
+	for o in overlaps:
+		current_y += o
 	return Vector2(0, current_y)
 
 
@@ -175,16 +189,82 @@ func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = t
 # ---------------------------------------------------------------------------
 ## 根据每张纸牌的索引和正面状态重新定位。
 func _reposition_cards() -> void:
+	var overlaps := _get_compressed_overlaps()
 	var current_y: float = 0.0
 	for i in range(_cards.size()):
 		var card: Card = _cards[i]
 		card.position = Vector2(0, current_y)
 		card.z_index = i
-
-		var overlap: int = FACE_UP_OVERLAP if card.face_up else FACE_DOWN_OVERLAP
-		current_y += overlap
+		current_y += overlaps[i]
 
 	_set_dynamic_height()
+
+
+## 计算原始间距数组（未压缩）。
+func _get_raw_overlaps() -> Array[int]:
+	var overlaps: Array[int] = []
+	for card in _cards:
+		overlaps.append(FACE_UP_OVERLAP if card.face_up else FACE_DOWN_OVERLAP)
+	return overlaps
+
+
+## 根据 max_column_height 计算压缩后的间距。
+## 背面朝上的纸牌压缩为固定小间距（不需要显示牌面）；
+## 正面朝上的纸牌分配剩余空间，若仍不足则再按比例压缩。
+func _get_compressed_overlaps() -> Array[float]:
+	var overlaps: Array[int] = _get_raw_overlaps()
+	if overlaps.is_empty() or max_column_height <= 0:
+		var result: Array[float] = []
+		for o in overlaps:
+			result.append(float(o))
+		return result
+
+	# 计算当前视觉高度（n 张牌只需 n-1 个有效间距 + CARD_HEIGHT）
+	var visual_height := float(CARD_HEIGHT)
+	for i in range(overlaps.size() - 1):
+		visual_height += overlaps[i]
+
+	if visual_height <= max_column_height:
+		var result: Array[float] = []
+		for o in overlaps:
+			result.append(float(o))
+		return result
+
+	# 非等比例压缩策略
+	const MIN_FACE_DOWN := 4.0   # 背面牌固定小间距，不需要显示牌面 / Face-down cards need no visible area
+	const MIN_FACE_UP := 24.0    # 正面牌最小保留可见高度，保证可辨认 / Face-up cards need enough visible height
+
+	var face_up_count := 0
+	var face_down_count := 0
+	for card in _cards:
+		if card.face_up:
+			face_up_count += 1
+		else:
+			face_down_count += 1
+
+	# 背面牌分配固定最小间距
+	var reserved_for_face_down := face_down_count * MIN_FACE_DOWN
+
+	# 正面牌分配剩余空间
+	var remaining := max_column_height - CARD_HEIGHT - reserved_for_face_down
+	var face_up_overlap := MIN_FACE_UP
+	if face_up_count > 0:
+		face_up_overlap = remaining / face_up_count
+		if face_up_overlap < MIN_FACE_UP:
+			# 空间不足，等比例压缩正面牌（但不小于绝对最小值）
+			var scale := remaining / (face_up_count * MIN_FACE_UP)
+			if scale < 0.05:
+				scale = 0.05
+			face_up_overlap = MIN_FACE_UP * scale
+
+	var result: Array[float] = []
+	for card in _cards:
+		if card.face_up:
+			result.append(face_up_overlap)
+		else:
+			result.append(MIN_FACE_DOWN)
+
+	return result
 
 
 ## 调整列的最小大小以适应所有堆叠的纸牌。
@@ -192,12 +272,12 @@ func _set_dynamic_height() -> void:
 	if _cards.is_empty():
 		custom_minimum_size.y = CARD_HEIGHT
 	else:
-		var total_overlap := 0
-		for card in _cards:
-			total_overlap += FACE_UP_OVERLAP if card.face_up else FACE_DOWN_OVERLAP
-
-		# 最后一张纸牌贡献其完整高度，而不仅仅是重叠部分
-		custom_minimum_size.y = float(total_overlap - (FACE_UP_OVERLAP if _cards[_cards.size() - 1].face_up else FACE_DOWN_OVERLAP) + CARD_HEIGHT)
+		var overlaps := _get_compressed_overlaps()
+		var total_y: float = 0.0
+		# n 张牌只需要 n-1 个间距来决定高度，最后一张牌的 overlap 留给下一张预测用
+		for i in range(overlaps.size() - 1):
+			total_y += overlaps[i]
+		custom_minimum_size.y = total_y + CARD_HEIGHT
 	_update_drop_area()
 
 
@@ -233,3 +313,12 @@ func _disconnect_drag_signals(card: Card) -> void:
 		card.card_drag_started.disconnect(my_drag_started)
 	if card.card_drag_ended.is_connected(my_drag_ended):
 		card.card_drag_ended.disconnect(my_drag_ended)
+
+
+func _draw() -> void:
+	if is_highlighted:
+		var rect := Rect2(Vector2.ZERO, size)
+		# 半透明金色填充
+		draw_rect(rect, Color(1.0, 0.85, 0.2, 0.12))
+		# 金色边框
+		draw_rect(rect, Color(1.0, 0.9, 0.4, 0.7), false, 2.5)

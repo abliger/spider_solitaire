@@ -213,6 +213,10 @@ func _reparent_to_source_immediate() -> void:
 
 ## 将纸牌动画回到源列中的原始位置。
 func _animate_to_original() -> void:
+	if _dragged_cards.is_empty():
+		_cleanup_drag()
+		drag_ended.emit(false, null)
+		return
 	_return_tween = create_tween()
 	_return_tween.set_parallel(true)
 	for i in range(_dragged_cards.size()):

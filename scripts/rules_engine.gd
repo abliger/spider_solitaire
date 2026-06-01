@@ -135,6 +135,12 @@ static func find_complete_sequence(cards: Array[CardData]) -> int:
 static func has_any_valid_move(columns: Array) -> bool:
 	# 检查面板上是否存在任何合法移动。
 	# 期望一个 Column 节点数组。
+	return not find_hint_move(columns).is_empty()
+
+
+static func find_hint_move(columns: Array) -> Dictionary:
+	# 查找一个合法移动并返回其信息，如果没有则返回空字典。
+	# 返回字典包含：from_col（源列索引）、to_col（目标列索引）、count（移动牌数）。
 	for from_col in range(columns.size()):
 		var col = columns[from_col]
 		if col == null or not col.has_method("get_cards"):
@@ -156,8 +162,12 @@ static func has_any_valid_move(columns: Array) -> bool:
 			var target_raw: Array = target_col.get_cards()
 			var to_data: Array[CardData] = _cards_to_data(target_raw)
 			if is_valid_move(movable, to_data):
-				return true
-	return false
+				return {
+					"from_col": from_col,
+					"to_col": to_col,
+					"count": movable.size()
+				}
+	return {}
 
 
 static func _cards_to_data(cards: Array) -> Array[CardData]:

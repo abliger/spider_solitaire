@@ -56,6 +56,10 @@ var current_difficulty: int = 1
 ## 是否正在执行发牌动画，防止重复点击。
 var _is_dealing: bool = false
 
+## 用于存放未进入场景树的发牌堆纸牌与完成序列纸牌的容器，防止退出时泄漏。
+var _stock_container: Node
+var _foundation_container: Node
+
 # ---------------------------------------------------------------------------
 # 内置函数重写
 # ---------------------------------------------------------------------------
@@ -66,6 +70,14 @@ func _ready() -> void:
 	if card_scene == null:
 		card_scene = preload("res://scenes/card.tscn")
 	DragSystem.register_board(self)
+
+	_stock_container = Node.new()
+	_stock_container.name = "StockContainer"
+	add_child(_stock_container)
+
+	_foundation_container = Node.new()
+	_foundation_container.name = "FoundationContainer"
+	add_child(_foundation_container)
 
 
 # ---------------------------------------------------------------------------
@@ -110,10 +122,21 @@ func setup_new_game(difficulty: int) -> void:
 	# --- 发牌堆 ---
 	# 剩余 104 - 54 = 50 张
 	for i in range(dealt_count, all_cards.size()):
-		stock.append(all_cards[i])
+		var card: Card = all_cards[i]
+		stock.append(card)
+		_stock_container.add_child(card)
+		card.visible = false
 
 	_update_stock_label()
 	_position_columns()
+
+	# 设置每列最大高度，避免纸牌过多时超出可视区域
+	var max_col_height := 520.0
+	if columns_container:
+		max_col_height = columns_container.size.y
+	for col in columns:
+		col.max_column_height = max_col_height
+
 	GameState.start_game(current_difficulty)
 	board_ready.emit()
 
@@ -147,7 +170,10 @@ func deal_from_stock() -> bool:
 	for col_idx in range(columns.size()):
 		var col = columns[col_idx]
 		var card = stock.pop_back()
+		card.visible = true
 		card.face_up = true
+		if card.get_parent() == _stock_container:
+			_stock_container.remove_child(card)
 		dealt.append(card)
 
 		# 先计算目标本地位置，再加入列
@@ -327,12 +353,21 @@ func _check_all_columns_for_sequences() -> Dictionary:
 				break
 
 			# 移除 13 张纸牌的序列
-			var sequence: Array = []
+			var sequence: Array[Card] = []
 			var source_cards = col.get_cards()
 			for i in range(start_idx, start_idx + FULL_SEQUENCE_LENGTH):
 				sequence.append(source_cards[i])
 
+			# 记录动画起始位置
+			var start_positions: Array[Vector2] = []
+			for i in range(sequence.size()):
+				start_positions.append(sequence[i].global_position)
+
 			col.remove_specific_cards(sequence)
+
+			# 启动收集动画：牌飞到左上角的 Foundation 空位
+			_animate_sequence_to_foundation(sequence, start_positions, foundations.size())
+
 			foundations.append(sequence)
 
 			GameState.add_score(100)
@@ -347,6 +382,83 @@ func _check_all_columns_for_sequences() -> Dictionary:
 				game_won.emit()
 				return result
 	return result
+
+
+## 将完成的 K-A 序列动画飞到 Foundation 对应槽位，动画结束后将牌隐藏保留在 _foundation_container 中以便撤销。
+func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Array[Vector2], slot_index: int) -> void:
+	var foundation_node := get_node_or_null("Foundation") as Foundation
+	if foundation_node == null:
+		# 无 Foundation 节点则直接隐藏
+		for card in sequence:
+			_foundation_container.add_child(card)
+			card.visible = false
+		return
+
+	# 将牌加入 _foundation_container 并恢复起始全局位置
+	for i in range(sequence.size()):
+		var card := sequence[i]
+		if card.get_parent() != null:
+			card.get_parent().remove_child(card)
+		_foundation_container.add_child(card)
+		card.global_position = start_positions[i]
+		card.z_index = 200 + i
+		card.visible = true
+
+	var target_global_pos := foundation_node.global_position + Vector2(
+		slot_index * (Foundation.SLOT_WIDTH + Foundation.SLOT_SPACING),
+		0
+	)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	for i in range(sequence.size()):
+		var card := sequence[i]
+		tween.tween_property(card, "global_position", target_global_pos, 0.35) \
+			.set_delay(i * 0.08) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+	# 动画结束后隐藏纸牌（保留在 _foundation_container 中以支持撤销）
+	tween.chain().tween_callback(func():
+		for card in sequence:
+			if is_instance_valid(card) and card.get_parent() == _foundation_container:
+				card.visible = false
+	)
+
+
+## 显示一个提示高亮。如果没有合法移动则播放错误音效。
+func show_hint() -> void:
+	_clear_hint_highlight()
+
+	var hint := RulesEngine.find_hint_move(columns)
+	if hint.is_empty():
+		SoundManager.play_sfx("error")
+		return
+
+	var from_col: int = hint["from_col"]
+	var to_col: int = hint["to_col"]
+	var count: int = hint["count"]
+
+	# 高亮源列的可移动牌串
+	var source = columns[from_col]
+	var moving_cards = _get_top_cards(source, count)
+	for card in moving_cards:
+		card.is_highlighted = true
+
+	# 高亮目标列
+	columns[to_col].is_highlighted = true
+
+	SoundManager.play_sfx("click")
+
+	# 2 秒后自动清除高亮
+	var timer := get_tree().create_timer(2.0)
+	timer.timeout.connect(_clear_hint_highlight)
+
+
+## 清除所有提示高亮。
+func _clear_hint_highlight() -> void:
+	for col in columns:
+		col.is_highlighted = false
+		for card in col.get_cards():
+			card.is_highlighted = false
 
 
 # ---------------------------------------------------------------------------
@@ -429,16 +541,15 @@ func _clear_board() -> void:
 	columns.clear()
 
 	# 发牌堆中剩余的纸牌
-	for card in stock:
+	for card in _stock_container.get_children():
 		if is_instance_valid(card):
 			card.queue_free()
 	stock.clear()
 
 	# 清空基础区
-	for seq in foundations:
-		for card in seq:
-			if is_instance_valid(card):
-				card.queue_free()
+	for card in _foundation_container.get_children():
+		if is_instance_valid(card):
+			card.queue_free()
 	foundations.clear()
 
 	_update_stock_label()

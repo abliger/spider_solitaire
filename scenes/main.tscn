@@ -11,7 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://pausemenu001" path="res://scenes/ui/pause_menu.tscn" id="9_pausemenu"]
 [ext_resource type="PackedScene" uid="uid://settings001" path="res://scenes/ui/settings.tscn" id="10_settings"]
 [ext_resource type="PackedScene" uid="uid://victory001" path="res://scenes/ui/victory_panel.tscn" id="11_victory"]
-[ext_resource type="Texture2D" uid="uid://bgtexture01" path="res://assets/textures/table_background.png" id="12_bg"]
+[ext_resource type="Texture2D" uid="uid://3csp1owt1yjf" path="res://assets/textures/table_background.png" id="12_bg"]
 
 [node name="Main" type="Control" unique_id=1018742592]
 layout_mode = 3
@@ -61,7 +61,7 @@ anchors_preset = 0
 offset_left = 40.0
 offset_top = 180.0
 offset_right = 1240.0
-offset_bottom = 700.0
+offset_bottom = 660.0
 
 [node name="Stock" parent="Board" unique_id=371189360 instance=ExtResource("5_stock")]
 anchors_preset = 0

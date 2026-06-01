@@ -22,6 +22,12 @@ var locale: String = "en":
 		locale = value
 		_save_settings()  # 修改后自动保存 / Auto-save on change
 
+var fullscreen: bool = false:
+	set(value):
+		fullscreen = value
+		_apply_fullscreen()
+		_save_settings()  # 修改后自动保存 / Auto-save on change
+
 var best_scores: Dictionary = {}  # 各难度的最高分记录 { "difficulty_1": {score, time, moves} }
 
 func _ready() -> void:
@@ -35,6 +41,7 @@ func _save_settings() -> void:
 		"music_enabled": music_enabled,
 		"last_difficulty": last_difficulty,
 		"locale": locale,
+		"fullscreen": fullscreen,
 		"best_scores": best_scores
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -57,9 +64,17 @@ func _load_settings() -> void:
 		music_enabled = result.get("music_enabled", true)
 		last_difficulty = result.get("last_difficulty", 1)
 		locale = result.get("locale", "en")
+		fullscreen = result.get("fullscreen", false)
 		var loaded_scores = result.get("best_scores", {})
 		if loaded_scores is Dictionary:
 			best_scores = loaded_scores
+
+func _apply_fullscreen() -> void:
+	# 应用全屏设置 / Apply fullscreen setting
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 
 func update_best_score(difficulty: int, new_score: int, time: int, moves: int) -> void:
 	# 更新指定难度的最佳记录：以分数为首要指标，同分时取时间/步数更优者
