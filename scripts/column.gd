@@ -226,7 +226,10 @@ func _get_compressed_overlaps() -> Array[float]:
 		visual_height += overlaps[i]
 
 	if visual_height <= effective_max:
-		return overlaps.map(func(o): return float(o)) as Array[float]
+		var result: Array[float] = []
+		for o in overlaps:
+			result.append(float(o))
+		return result
 
 	# 非等比例压缩策略
 	const MIN_FACE_DOWN := 12.0  # 背面牌最小间距，保留边缘可见以便数牌 / Keep edges visible to count cards
