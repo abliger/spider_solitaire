@@ -154,10 +154,7 @@ func deal_from_stock() -> bool:
 	if stock.size() < CARDS_PER_DEAL:
 		return false
 
-	# 验证没有空列（蜘蛛纸牌规则：如果有空列则不能发牌）
-	for col in columns:
-		if col.is_empty():
-			return false
+	# 检查是否正在发牌动画中
 	if _is_dealing:
 		return false
 
