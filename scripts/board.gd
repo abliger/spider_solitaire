@@ -395,13 +395,14 @@ func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Arr
 		return
 
 	# 将牌加入 _foundation_container 并恢复起始全局位置
+	# z_index 倒序：K（序列底部）叠在最上方，符合压牌逻辑
 	for i in range(sequence.size()):
 		var card := sequence[i]
 		if card.get_parent() != null:
 			card.get_parent().remove_child(card)
 		_foundation_container.add_child(card)
 		card.global_position = start_positions[i]
-		card.z_index = 200 + i
+		card.z_index = 200 + (sequence.size() - 1 - i)
 		card.visible = true
 
 	var target_global_pos := foundation_node.global_position + Vector2(
