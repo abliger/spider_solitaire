@@ -1,6 +1,7 @@
 extends Control
 
 # HUD 按钮按下信号 / HUD button press signals
+signal rules_pressed  # 规则按钮被按下 / Rules button pressed
 signal undo_pressed   # 撤销按钮被按下 / Undo button pressed
 signal hint_pressed   # 提示按钮被按下 / Hint button pressed
 signal pause_pressed  # 暂停按钮被按下 / Pause button pressed
@@ -10,6 +11,7 @@ signal pause_pressed  # 暂停按钮被按下 / Pause button pressed
 @onready var time_label: Label = $TopBar/StatsContainer/TimeLabel
 @onready var moves_label: Label = $TopBar/StatsContainer/MovesLabel
 @onready var difficulty_label: Label = $TopBar/StatsContainer/DifficultyLabel
+@onready var rules_button: Button = $TopBar/ButtonsContainer/RulesButton
 @onready var undo_button: Button = $TopBar/ButtonsContainer/UndoButton
 @onready var hint_button: Button = $TopBar/ButtonsContainer/HintButton
 @onready var pause_button: Button = $TopBar/ButtonsContainer/PauseButton
@@ -38,6 +40,7 @@ func _ready() -> void:
 	GameState.game_won.connect(_on_game_won)
 
 	# 连接按钮按下事件到信号发射
+	rules_button.pressed.connect(func(): rules_pressed.emit())
 	undo_button.pressed.connect(func(): undo_pressed.emit())
 	hint_button.pressed.connect(func(): hint_pressed.emit())
 	pause_button.pressed.connect(func(): pause_pressed.emit())
@@ -56,6 +59,7 @@ func _on_game_won() -> void:
 
 func _update_ui_text() -> void:
 	# 根据当前语言更新所有按钮和标签文本
+	rules_button.text = Localization.translate("rules")
 	undo_button.text = Localization.translate("undo")
 	hint_button.text = Localization.translate("hint")
 	pause_button.text = Localization.translate("pause")

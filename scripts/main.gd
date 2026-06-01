@@ -10,6 +10,7 @@ extends Control
 @onready var pause_menu: Control = $PauseMenu
 @onready var settings_panel: Control = $Settings
 @onready var victory_panel: Control = $VictoryPanel
+@onready var rules_panel: Control = $RulesPanel
 
 func _ready() -> void:
 	# 将模态弹出窗口放入高层 CanvasLayer，使其渲染在拖拽的纸牌之上
@@ -28,6 +29,9 @@ func _ready() -> void:
 	if victory_panel.get_parent() != modal_layer:
 		victory_panel.get_parent().remove_child(victory_panel)
 		modal_layer.add_child(victory_panel)
+	if rules_panel.get_parent() != modal_layer:
+		rules_panel.get_parent().remove_child(rules_panel)
+		modal_layer.add_child(rules_panel)
 
 	# 连接主菜单信号
 	main_menu.start_game.connect(_on_start_game)
@@ -36,6 +40,7 @@ func _ready() -> void:
 	main_menu.quit.connect(_on_quit)
 
 	# 连接 HUD 信号
+	hud.rules_pressed.connect(_on_rules_pressed)
 	hud.undo_pressed.connect(_on_undo_pressed)
 	hud.hint_pressed.connect(_on_hint_pressed)
 	hud.pause_pressed.connect(_on_pause_pressed)
@@ -52,6 +57,9 @@ func _ready() -> void:
 	# 连接胜利面板信号
 	victory_panel.play_again.connect(_on_play_again)
 	victory_panel.main_menu.connect(_on_return_to_main_menu)
+
+	# 连接规则面板信号
+	rules_panel.close_pressed.connect(_on_rules_closed)
 
 	# 连接发牌堆信号
 	stock.deal_requested.connect(_on_deal_requested)
@@ -75,6 +83,7 @@ func _show_main_menu() -> void:
 	pause_menu.visible = false
 	victory_panel.visible = false
 	settings_panel.visible = false
+	rules_panel.hide_rules()
 
 func _start_game(difficulty: int) -> void:
 	main_menu.visible = false
@@ -83,6 +92,7 @@ func _start_game(difficulty: int) -> void:
 	pause_menu.visible = false
 	victory_panel.visible = false
 	settings_panel.visible = false
+	rules_panel.hide_rules()
 	MoveHistory.clear()
 	board.setup_new_game(difficulty)
 
@@ -150,6 +160,11 @@ func _on_hint_pressed() -> void:
 		return
 	board.show_hint()
 
+func _on_rules_pressed() -> void:
+	GameState.is_game_active = false
+	DragSystem.force_end_drag()
+	rules_panel.show_rules()
+
 func _on_pause_pressed() -> void:
 	GameState.is_game_active = false
 	DragSystem.force_end_drag()
@@ -183,6 +198,11 @@ func _on_settings_back() -> void:
 		pause_menu.visible = true
 	else:
 		main_menu.visible = true
+
+func _on_rules_closed() -> void:
+	rules_panel.hide_rules()
+	if board.visible:
+		GameState.is_game_active = true
 
 func _on_return_to_main_menu() -> void:
 	GameState.reset_game()

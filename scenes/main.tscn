@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://pausemenu001" path="res://scenes/ui/pause_menu.tscn" id="9_pausemenu"]
 [ext_resource type="PackedScene" uid="uid://settings001" path="res://scenes/ui/settings.tscn" id="10_settings"]
 [ext_resource type="PackedScene" uid="uid://victory001" path="res://scenes/ui/victory_panel.tscn" id="11_victory"]
+[ext_resource type="PackedScene" path="res://scenes/ui/rules_panel.tscn" id="12_rules"]
 [ext_resource type="Texture2D" uid="uid://3csp1owt1yjf" path="res://assets/textures/table_background.png" id="12_bg"]
 
 [node name="Main" type="Control" unique_id=1018742592]
@@ -93,5 +94,9 @@ visible = false
 layout_mode = 1
 
 [node name="VictoryPanel" parent="." unique_id=1012912017 instance=ExtResource("11_victory")]
+visible = false
+layout_mode = 1
+
+[node name="RulesPanel" parent="." unique_id=1012912018 instance=ExtResource("12_rules")]
 visible = false
 layout_mode = 1
