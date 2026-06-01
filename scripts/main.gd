@@ -158,7 +158,8 @@ func _on_undo_pressed() -> void:
 func _on_hint_pressed() -> void:
 	if not GameState.is_game_active:
 		return
-	board.show_hint()
+	if board.show_hint():
+		GameState.add_score(-50)
 
 func _on_rules_pressed() -> void:
 	GameState.is_game_active = false

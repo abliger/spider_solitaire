@@ -344,7 +344,7 @@ func _disconnect_drag_signals(card: Card) -> void:
 func _draw() -> void:
 	if is_highlighted:
 		var rect := Rect2(Vector2.ZERO, size)
-		# 半透明金色填充
-		draw_rect(rect, Color(1.0, 0.85, 0.2, 0.12))
+		# 高饱和度金色填充（提示效果更明显）
+		draw_rect(rect, Color(1.0, 0.85, 0.0, 0.30))
 		# 金色边框
-		draw_rect(rect, Color(1.0, 0.9, 0.4, 0.7), false, 2.5)
+		draw_rect(rect, Color(1.0, 0.95, 0.2, 0.90), false, 3.5)

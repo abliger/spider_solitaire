@@ -426,13 +426,14 @@ func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Arr
 
 
 ## 显示一个提示高亮。如果没有合法移动则播放错误音效。
-func show_hint() -> void:
+## 返回 true 表示成功找到并显示了提示。
+func show_hint() -> bool:
 	_clear_hint_highlight()
 
 	var hint := RulesEngine.find_hint_move(columns)
 	if hint.is_empty():
 		SoundManager.play_sfx("error")
-		return
+		return false
 
 	var from_col: int = hint["from_col"]
 	var to_col: int = hint["to_col"]
@@ -449,9 +450,10 @@ func show_hint() -> void:
 
 	SoundManager.play_sfx("click")
 
-	# 2 秒后自动清除高亮
-	var timer := get_tree().create_timer(2.0)
+	# 3 秒后自动清除高亮
+	var timer := get_tree().create_timer(3.0)
 	timer.timeout.connect(_clear_hint_highlight)
+	return true
 
 
 ## 清除所有提示高亮。

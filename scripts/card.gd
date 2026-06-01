@@ -204,11 +204,11 @@ func _draw_face_down() -> void:
 
 func _draw_highlight() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	# 半透明金色发光覆盖层
-	_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(1.0, 0.85, 0.2, 0.18))
-	draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(1.0, 0.9, 0.4, 0.6), 2.5)
+	# 高饱和度金色发光覆盖层（提示效果更明显）
+	_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(1.0, 0.85, 0.0, 0.40))
+	draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(1.0, 0.95, 0.2, 0.95), 3.5)
 	# 内部细亮线
-	draw_rounded_rect_outline(rect.grow(-3), CORNER_RADIUS - 1, Color(1.0, 0.95, 0.6, 0.4), 1.0)
+	draw_rounded_rect_outline(rect.grow(-4), CORNER_RADIUS - 1, Color(1.0, 1.0, 0.7, 0.7), 1.5)
 
 
 ## 用给定颜色填充圆角矩形。
