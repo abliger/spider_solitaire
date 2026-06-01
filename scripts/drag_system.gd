@@ -15,6 +15,7 @@ var _source_column: Column = null
 var _original_positions: Array[Vector2] = []
 var _drag_offset: Vector2 = Vector2.ZERO
 var _is_dragging: bool = false
+var _is_ending_drag: bool = false
 var _touch_pos: Vector2 = Vector2.ZERO
 var _using_touch: bool = false
 var _return_tween: Tween = null
@@ -54,6 +55,8 @@ func force_end_drag() -> void:
 				_source_column.add_child(card)
 			else:
 				card.queue_free()
+	if is_instance_valid(_source_column):
+		_source_column._reposition_cards()
 	_cleanup_drag()
 
 
@@ -98,8 +101,9 @@ func start_drag(source_column: Column, card: Card) -> void:
 
 ## 结束当前拖拽，验证放置，然后提交移动或播放返回动画。
 func end_drag() -> void:
-	if not _is_dragging:
+	if not _is_dragging or _is_ending_drag:
 		return
+	_is_ending_drag = true
 	_is_dragging = false
 
 	var drop_pos := _get_input_position()
@@ -122,10 +126,12 @@ func end_drag() -> void:
 
 	if success:
 		_cleanup_drag()
+		_is_ending_drag = false
 		drag_ended.emit(true, target_column)
 	else:
 		invalid_move_attempted.emit()
-		_animate_to_original()
+		await _animate_to_original()
+		_is_ending_drag = false
 
 
 func _process(_delta: float) -> void:
@@ -135,6 +141,12 @@ func _process(_delta: float) -> void:
 		for i in range(_dragged_cards.size()):
 			var card: Card = _dragged_cards[i]
 			card.global_position = base_pos + Vector2(0, i * Column.FACE_UP_OVERLAP)
+	elif not _dragged_cards.is_empty() and not _is_ending_drag and _return_tween == null:
+		# 防御：鼠标已释放但仍有残留牌在拖拽容器中，自动放回原位
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_is_ending_drag = true
+			await _animate_to_original()
+			_is_ending_drag = false
 
 
 func _input(event: InputEvent) -> void:
@@ -143,6 +155,11 @@ func _input(event: InputEvent) -> void:
 		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
 			if _is_dragging:
 				end_drag()
+			elif not _dragged_cards.is_empty() and not _is_ending_drag and _return_tween == null:
+				# 防御：鼠标已释放但仍有残留牌在拖拽容器中，自动放回原位
+				_is_ending_drag = true
+				await _animate_to_original()
+				_is_ending_drag = false
 	elif event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed:
@@ -151,6 +168,10 @@ func _input(event: InputEvent) -> void:
 		else:
 			if _is_dragging:
 				end_drag()
+			elif not _dragged_cards.is_empty() and not _is_ending_drag and _return_tween == null:
+				_is_ending_drag = true
+				await _animate_to_original()
+				_is_ending_drag = false
 			_using_touch = false
 	elif event is InputEventScreenDrag:
 		_touch_pos = event.position
@@ -217,11 +238,17 @@ func _animate_to_original() -> void:
 		_cleanup_drag()
 		drag_ended.emit(false, null)
 		return
+
+	# 确保所有牌都已回到源列，防止因异步中断导致牌仍留在 _drag_container
+	_reparent_to_source_immediate()
+
 	_return_tween = create_tween()
 	_return_tween.set_parallel(true)
 	for i in range(_dragged_cards.size()):
 		var card: Card = _dragged_cards[i]
-		_return_tween.tween_property(card, "position", _original_positions[i], 0.25) \
+		# 使用全局坐标做动画，避免父节点变化导致坐标混乱
+		var target_global := _source_column.global_position + _original_positions[i]
+		_return_tween.tween_property(card, "global_position", target_global, 0.25) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 

@@ -208,12 +208,20 @@ func _get_raw_overlaps() -> Array[int]:
 	return overlaps
 
 
-## 根据 max_column_height 计算压缩后的间距。
-## 背面朝上的纸牌压缩为固定小间距（不需要显示牌面）；
+## 根据实际可用空间计算压缩后的间距。
+## 动态参考当前视口高度，避免窗口变大后仍按固定小高度压缩。
+## 背面朝上的纸牌压缩为固定小间距（保留可见边缘以便判断数量）；
 ## 正面朝上的纸牌分配剩余空间，若仍不足则再按比例压缩。
 func _get_compressed_overlaps() -> Array[float]:
 	var overlaps: Array[int] = _get_raw_overlaps()
-	if overlaps.is_empty() or max_column_height <= 0:
+	if overlaps.is_empty():
+		var result: Array[float] = []
+		for o in overlaps:
+			result.append(float(o))
+		return result
+
+	var effective_max := _get_effective_max_height()
+	if effective_max <= 0:
 		var result: Array[float] = []
 		for o in overlaps:
 			result.append(float(o))
@@ -224,14 +232,14 @@ func _get_compressed_overlaps() -> Array[float]:
 	for i in range(overlaps.size() - 1):
 		visual_height += overlaps[i]
 
-	if visual_height <= max_column_height:
+	if visual_height <= effective_max:
 		var result: Array[float] = []
 		for o in overlaps:
 			result.append(float(o))
 		return result
 
 	# 非等比例压缩策略
-	const MIN_FACE_DOWN := 4.0   # 背面牌固定小间距，不需要显示牌面 / Face-down cards need no visible area
+	const MIN_FACE_DOWN := 12.0  # 背面牌最小间距，保留边缘可见以便数牌 / Keep edges visible to count cards
 	const MIN_FACE_UP := 24.0    # 正面牌最小保留可见高度，保证可辨认 / Face-up cards need enough visible height
 
 	var face_up_count := 0
@@ -246,7 +254,7 @@ func _get_compressed_overlaps() -> Array[float]:
 	var reserved_for_face_down := face_down_count * MIN_FACE_DOWN
 
 	# 正面牌分配剩余空间
-	var remaining := max_column_height - CARD_HEIGHT - reserved_for_face_down
+	var remaining := effective_max - CARD_HEIGHT - reserved_for_face_down
 	var face_up_overlap := MIN_FACE_UP
 	if face_up_count > 0:
 		face_up_overlap = remaining / face_up_count
@@ -265,6 +273,24 @@ func _get_compressed_overlaps() -> Array[float]:
 			result.append(MIN_FACE_DOWN)
 
 	return result
+
+
+## 动态计算当前列实际可用的最大高度。
+## 综合考虑 Board 传入的预设值与当前视口剩余空间。
+func _get_effective_max_height() -> float:
+	var effective := max_column_height
+
+	var viewport := get_viewport()
+	if viewport != null:
+		var viewport_height := viewport.get_visible_rect().size.y
+		var available := viewport_height - global_position.y - 20.0
+		available = max(available, 200.0)  # 至少保留 200px，避免过度压缩
+		if effective > 0:
+			effective = max(effective, available)
+		else:
+			effective = available
+
+	return effective
 
 
 ## 调整列的最小大小以适应所有堆叠的纸牌。

@@ -413,8 +413,9 @@ func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Arr
 	tween.set_parallel(true)
 	for i in range(sequence.size()):
 		var card := sequence[i]
+		# 从 A（序列顶部）开始向 K（序列底部）依次飞入
 		tween.tween_property(card, "global_position", target_global_pos, 0.35) \
-			.set_delay(i * 0.08) \
+			.set_delay((sequence.size() - 1 - i) * 0.08) \
 			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 	# 动画结束后隐藏纸牌（保留在 _foundation_container 中以支持撤销）
 	tween.chain().tween_callback(func():
