@@ -360,15 +360,14 @@ func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Arr
 		return
 
 	# 将牌加入 _foundation_container 并恢复起始全局位置
-	# 反向遍历添加：A 先添加（底层），K 最后添加（顶层），
-	# 确保子节点顺序与 z_index 一致，K 最终在最上方。
-	for i in range(sequence.size() - 1, -1, -1):
+	# 顺序添加即可，最终渲染顺序由动态 z_index 控制。
+	for i in range(sequence.size()):
 		var card := sequence[i]
 		if card.get_parent() != null:
 			card.get_parent().remove_child(card)
 		_foundation_container.add_child(card)
 		card.global_position = start_positions[i]
-		card.z_index = 200 + (sequence.size() - 1 - i)
+		card.z_index = 200
 		card.visible = true
 
 	var target_global_pos := foundation_node.global_position + Vector2(
@@ -380,9 +379,14 @@ func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Arr
 	tween.set_parallel(true)
 	for i in range(sequence.size()):
 		var card := sequence[i]
+		var delay := (sequence.size() - 1 - i) * 0.08
+		# 在该牌开始飞入的瞬间提升 z_index，确保"正在飞"的牌始终在最上面，
+		# 不会被仍在原位的牌盖住，避免悬空感。
+		tween.tween_callback(func() -> void: card.z_index = 300 + (sequence.size() - 1 - i)) \
+			.set_delay(delay)
 		# 从 A（序列顶部）开始向 K（序列底部）依次飞入
 		tween.tween_property(card, "global_position", target_global_pos, 0.35) \
-			.set_delay((sequence.size() - 1 - i) * 0.08) \
+			.set_delay(delay) \
 			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 	# 动画结束后隐藏纸牌（保留在 _foundation_container 中以支持撤销）
 	tween.chain().tween_callback(func():

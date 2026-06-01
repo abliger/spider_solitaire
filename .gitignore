@@ -29,6 +29,6 @@ build/
 # AI agent 配置（可选，如需保留请注释掉）
 .agents/
 
-# 测试残留文件
-test_*.gd.uid
-test_*.gd
+# 测试残留文件（仅排除项目根目录下的临时测试文件）
+/test_*.gd.uid
+/test_*.gd
