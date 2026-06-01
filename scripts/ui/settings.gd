@@ -1,8 +1,7 @@
 extends Control
 
 # 设置界面发出的信号 / Signals emitted by the settings panel
-signal back_pressed      # 返回按钮被按下 / Back button pressed
-signal settings_changed  # 设置项发生变化 / A setting has changed
+signal back_pressed  # 返回按钮被按下 / Back button pressed
 
 # 设置界面 UI 节点引用 / Settings UI node references
 @onready var background: ColorRect = $Background
@@ -64,19 +63,13 @@ func show_settings() -> void:
 		_:
 			language_option.select(0)
 
-func hide_settings() -> void:
-	# 隐藏设置界面
-	visible = false
-
 func _on_sound_toggled(enabled: bool) -> void:
 	# 切换音效开关
 	SettingsData.sound_enabled = enabled
-	settings_changed.emit()
 
 func _on_music_toggled(enabled: bool) -> void:
 	# 切换音乐开关，开启时自动播放背景音乐
 	SettingsData.music_enabled = enabled
-	settings_changed.emit()
 	if enabled:
 		SoundManager.play_music("bgm")
 	else:
@@ -85,7 +78,6 @@ func _on_music_toggled(enabled: bool) -> void:
 func _on_fullscreen_toggled(enabled: bool) -> void:
 	# 切换全屏开关
 	SettingsData.fullscreen = enabled
-	settings_changed.emit()
 
 func _on_difficulty_selected(index: int) -> void:
 	# 根据下拉框索引映射到实际难度值并保存
@@ -98,7 +90,6 @@ func _on_difficulty_selected(index: int) -> void:
 		2:
 			difficulty = 4
 	SettingsData.last_difficulty = difficulty
-	settings_changed.emit()
 
 func _on_language_selected(index: int) -> void:
 	# 根据下拉框索引切换语言
@@ -133,4 +124,3 @@ func _on_reset_scores_pressed() -> void:
 	# 重置最高分记录
 	SoundManager.play_sfx("click")
 	SettingsData.best_scores = {}
-	settings_changed.emit()

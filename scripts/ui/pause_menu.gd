@@ -36,11 +36,4 @@ func _update_ui_text() -> void:
 	settings_button.text = Localization.translate("settings")
 	main_menu_button.text = Localization.translate("main_menu")
 
-func show_pause() -> void:
-	# 显示暂停菜单并播放点击音效
-	visible = true
-	SoundManager.play_sfx("click")
 
-func hide_pause() -> void:
-	# 隐藏暂停菜单
-	visible = false

@@ -22,9 +22,6 @@ const FACE_DOWN_OVERLAP: int = 20 # Face-down cards overlap more (less visible)
 ## 当前在此列中的纸牌，按从底到顶排序。
 var _cards: Array[Card] = []
 
-## 用于放置目标检测的 Area2D。
-var drop_area: Area2D
-
 ## 记录最近一次 remove_cards / remove_specific_cards 时翻开的牌。
 var last_revealed_card: Card = null
 
@@ -45,14 +42,6 @@ func _ready() -> void:
 	# 大小固定为纸牌宽度；高度动态增长。
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	drop_area = $DropArea
-	
-	# 创建独立的碰撞形状副本，避免多个 Column 实例共享同一个 RectangleShape2D。
-	var shape_node: CollisionShape2D = drop_area.get_node_or_null("CollisionShape2D")
-	if shape_node != null and shape_node.shape != null:
-		shape_node.shape = shape_node.shape.duplicate()
-	
-	_update_drop_area()
 	_set_dynamic_height()
 
 
@@ -159,6 +148,11 @@ func is_empty() -> bool:
 	return _cards.is_empty()
 
 
+## 如果此列包含指定的纸牌则返回 true。
+func has_card(card: Card) -> bool:
+	return _cards.has(card)
+
+
 ## 移除特定的纸牌集合（用于拖拽子序列时）。
 ## 如果 `flip_revealed` 为 false，则新暴露的顶部纸牌不会被翻为正面朝上。
 func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = true) -> void:
@@ -190,6 +184,11 @@ func remove_specific_cards(cards_to_remove: Array[Card], flip_revealed: bool = t
 ## 根据每张纸牌的索引和正面状态重新定位。
 func _reposition_cards() -> void:
 	var overlaps := _get_compressed_overlaps()
+	if overlaps.size() < _cards.size():
+		# 防御：间距计算异常时回退到固定间距，避免数组越界
+		overlaps.resize(_cards.size())
+		for i in range(_cards.size()):
+			overlaps[i] = FACE_UP_OVERLAP if _cards[i].face_up else FACE_DOWN_OVERLAP
 	var current_y: float = 0.0
 	for i in range(_cards.size()):
 		var card: Card = _cards[i]
@@ -296,23 +295,6 @@ func _set_dynamic_height(overlaps: Array[float] = []) -> void:
 		for i in range(overlaps.size() - 1):
 			total_y += overlaps[i]
 		custom_minimum_size.y = total_y + CARD_HEIGHT
-	_update_drop_area()
-
-
-
-## 调整 Area2D 碰撞形状的大小以匹配列的当前高度。
-func _update_drop_area() -> void:
-	if drop_area == null:
-		return
-	var shape_node: CollisionShape2D = drop_area.get_node_or_null("CollisionShape2D")
-	if shape_node == null:
-		return
-	var shape: RectangleShape2D = shape_node.shape
-	if shape == null:
-		return
-	
-	shape.size = Vector2(CARD_WIDTH, custom_minimum_size.y)
-	shape_node.position = Vector2(CARD_WIDTH / 2.0, custom_minimum_size.y / 2.0)
 
 
 func _on_card_drag_started(card: Card) -> void:
@@ -355,21 +337,9 @@ func _draw_empty_placeholder() -> void:
 	var gap_len := 4.0
 	var line_width := 2.0
 	var color := Color(0.85, 0.85, 0.85, 0.40)
-	_dash_line(Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y), dash_len, gap_len, color, line_width)
-	_dash_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
-	_dash_line(Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
-	_dash_line(Vector2(rect.position.x + rect.size.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
+	Drawing.draw_dash_line(self, Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y), dash_len, gap_len, color, line_width)
+	Drawing.draw_dash_line(self, Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
+	Drawing.draw_dash_line(self, Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
+	Drawing.draw_dash_line(self, Vector2(rect.position.x + rect.size.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
 
 
-## 绘制虚线线段。
-func _dash_line(from: Vector2, to: Vector2, dash_len: float, gap_len: float, color: Color, width: float) -> void:
-	var total := from.distance_to(to)
-	if total <= 0:
-		return
-	var dir := (to - from).normalized()
-	var pos := 0.0
-	while pos < total:
-		var seg_start := from + dir * pos
-		var seg_end: Vector2 = from + dir * minf(pos + dash_len, total)
-		draw_line(seg_start, seg_end, color, width)
-		pos += dash_len + gap_len

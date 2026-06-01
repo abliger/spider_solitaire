@@ -29,7 +29,10 @@ var fullscreen: bool = false:
 		_apply_fullscreen()
 		_request_save()
 
-var best_scores: Dictionary = {}  # 各难度的最高分记录 { "difficulty_1": {score, time, moves} }
+var best_scores: Dictionary = {}:  # 各难度的最高分记录 { "difficulty_1": {score, time, moves} }
+	set(value):
+		best_scores = value
+		_request_save()
 
 var _save_timer: Timer = null  # 防抖保存定时器 / Debounce timer
 

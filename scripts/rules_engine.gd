@@ -178,7 +178,7 @@ static func _cards_to_data(cards: Array) -> Array[CardData]:
 	for card in cards:
 		if card is CardData:
 			result.append(card)
-		elif card.has_method("set_card_data"):
+		elif card is Card:
 			# Card 节点
 			var data := CardData.new(card.suit, card.rank)
 			data.face_up = card.face_up

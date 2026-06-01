@@ -3,8 +3,6 @@ extends Control
 
 ## 当新游戏设置完成后发出此信号。
 signal board_ready
-## 从发牌堆向各列发一批 10 张纸牌后发出此信号。
-signal stock_dealt(cards_dealt: Array)
 ## 当发现并成功移除一组完整的 K-A 同花色序列时发出此信号。
 signal sequence_completed(sequence: Array)
 ## 当完成全部 8 组序列时发出此信号（游戏胜利）。
@@ -212,7 +210,6 @@ func deal_from_stock() -> bool:
 			col._reposition_cards()
 		_check_all_columns_for_sequences()
 		_is_dealing = false
-		stock_dealt.emit(dealt)
 	)
 
 	GameState.increment_move()
@@ -255,25 +252,7 @@ func move_cards(from_col: int, to_col: int, count: int, record_history: bool = t
 	target.add_cards(removed)
 
 	var source_flipped := source.last_revealed_card != null
-
-	GameState.increment_move()
-	GameState.add_score(-1)
-	SoundManager.play_sfx("move")
-
-	# 记录移动以便撤销
-	var record: MoveHistory.MoveRecord = null
-	if record_history:
-		record = MoveHistory.record_move(from_col, to_col, removed, false, 0, -1)
-
-	# 移动后检查是否有完成的序列
-	if check_sequences:
-		var seq_result := _check_all_columns_for_sequences()
-		if record != null:
-			if seq_result.count > 0:
-				MoveHistory.update_last_record(source_flipped, seq_result.count, seq_result.count * 100, seq_result.sequences)
-			elif source_flipped:
-				MoveHistory.update_last_record(true, 0, 0)
-
+	_execute_move(from_col, to_col, removed, source_flipped, record_history, check_sequences)
 	return true
 
 
@@ -317,36 +296,13 @@ func move_card_sequence(from_col: int, to_col: int, cards: Array, record_history
 	target.add_cards(cards)
 
 	var source_flipped := source.last_revealed_card != null
-
-	GameState.increment_move()
-	GameState.add_score(-1)
-	SoundManager.play_sfx("move")
-
-	# 记录移动以便撤销
-	var record: MoveHistory.MoveRecord = null
-	if record_history:
-		record = MoveHistory.record_move(from_col, to_col, cards, false, 0, -1)
-
-	# 移动后检查是否有完成的序列
-	if check_sequences:
-		var seq_result := _check_all_columns_for_sequences()
-		if record != null:
-			if seq_result.count > 0:
-				MoveHistory.update_last_record(source_flipped, seq_result.count, seq_result.count * 100, seq_result.sequences)
-			elif source_flipped:
-				MoveHistory.update_last_record(true, 0, 0)
-
+	_execute_move(from_col, to_col, cards, source_flipped, record_history, check_sequences)
 	return true
 
 
 # ---------------------------------------------------------------------------
 # 序列 / 胜利检查
 # ---------------------------------------------------------------------------
-## 扫描所有列以查找完整的 K-A 同花色序列。
-func check_for_complete_sequence() -> void:
-	_check_all_columns_for_sequences()
-
-
 func _check_all_columns_for_sequences() -> Dictionary:
 	var result := {"count": 0, "sequences": []}
 	for col_idx in range(columns.size()):
@@ -390,8 +346,12 @@ func _check_all_columns_for_sequences() -> Dictionary:
 
 
 ## 将完成的 K-A 序列动画飞到 Foundation 对应槽位，动画结束后将牌隐藏保留在 _foundation_container 中以便撤销。
+var _foundation_node: Foundation = null
+
 func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Array[Vector2], slot_index: int) -> void:
-	var foundation_node := get_node_or_null("Foundation") as Foundation
+	if _foundation_node == null:
+		_foundation_node = get_node_or_null("Foundation") as Foundation
+	var foundation_node := _foundation_node
 	if foundation_node == null:
 		# 无 Foundation 节点则直接隐藏
 		for card in sequence:
@@ -537,10 +497,34 @@ func _update_stock_label() -> void:
 		stock_count_label.text = Localization.translate("stock_left") % stock.size()
 
 
+## 执行移动后的公共逻辑：计分、音效、历史记录、序列检查。
+func _execute_move(from_col: int, to_col: int, moved_cards: Array[Card], source_flipped: bool, record_history: bool, check_sequences: bool) -> void:
+	GameState.increment_move()
+	GameState.add_score(-1)
+	SoundManager.play_sfx("move")
+
+	var record: MoveHistory.MoveRecord = null
+	if record_history:
+		record = MoveHistory.record_move(from_col, to_col, moved_cards, false, 0, -1)
+
+	if check_sequences:
+		var seq_result := _check_all_columns_for_sequences()
+		if record != null:
+			if seq_result.count > 0:
+				MoveHistory.update_last_record(source_flipped, seq_result.count, seq_result.count * 100, seq_result.sequences)
+			elif source_flipped:
+				MoveHistory.update_last_record(true, 0, 0)
+
+
 ## 移除所有列和纸牌，并重置发牌堆 / 基础区。
 func clear_board() -> void:
 	# 清理前强制结束任何活跃的拖拽
 	DragSystem.force_end_drag()
+
+	# 停止任何进行中的提示高亮定时器
+	if _hint_timer != null:
+		_hint_timer.stop()
+	_clear_hint_highlight()
 
 	# 移除现有列
 	for col in columns:
@@ -559,14 +543,10 @@ func clear_board() -> void:
 		if is_instance_valid(card):
 			card.queue_free()
 	foundations.clear()
+	_foundation_node = null
 
 	_update_stock_label()
 	_is_dealing = false
-
-
-## 返回当前已完成序列的数量。
-func get_foundation_count() -> int:
-	return foundations.size()
 
 
 ## 移除并返回最后一个完成的序列（用于撤销）。

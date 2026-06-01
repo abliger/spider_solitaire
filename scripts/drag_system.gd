@@ -48,6 +48,7 @@ func force_end_drag() -> void:
 		return
 
 	_is_dragging = false
+	_is_ending_drag = false
 	for card in _dragged_cards:
 		if is_instance_valid(card):
 			if card.get_parent() == _drag_container:
@@ -63,7 +64,7 @@ func force_end_drag() -> void:
 
 ## 开始拖拽 `source_column` 中包含 `card` 的可移动序列。
 func start_drag(source_column: Column, card: Card) -> void:
-	if _is_dragging:
+	if _is_dragging or _is_ending_drag:
 		return
 	if _board == null:
 		return
@@ -131,8 +132,7 @@ func end_drag() -> void:
 		_cleanup_drag()
 		_is_ending_drag = false
 	else:
-		await _animate_to_original()
-		_is_ending_drag = false
+		_animate_to_original()
 
 
 func _process(_delta: float) -> void:
@@ -146,39 +146,37 @@ func _process(_delta: float) -> void:
 		# 防御：鼠标已释放但仍有残留牌在拖拽容器中，自动放回原位
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			_is_ending_drag = true
-			await _animate_to_original()
-			_is_ending_drag = false
+			_animate_to_original()
 
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-			if _is_dragging:
-				end_drag()
-			elif not _dragged_cards.is_empty() and not _is_ending_drag and _return_tween == null:
-				# 防御：鼠标已释放但仍有残留牌在拖拽容器中，自动放回原位
-				_is_ending_drag = true
-				await _animate_to_original()
-				_is_ending_drag = false
+			_handle_release()
 	elif event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
 		if touch.pressed:
 			_touch_pos = touch.position
 			_using_touch = true
 		else:
-			if _is_dragging:
-				end_drag()
-			elif not _dragged_cards.is_empty() and not _is_ending_drag and _return_tween == null:
-				_is_ending_drag = true
-				await _animate_to_original()
-				_is_ending_drag = false
+			_handle_release()
 			_using_touch = false
 	elif event is InputEventScreenDrag:
 		_touch_pos = event.position
 		_using_touch = true
 	elif event is InputEventMouseMotion:
 		_using_touch = false
+
+
+## 处理输入释放（鼠标或触摸）。
+func _handle_release() -> void:
+	if _is_dragging:
+		end_drag()
+	elif not _dragged_cards.is_empty() and not _is_ending_drag and _return_tween == null:
+		# 防御：输入已释放但仍有残留牌在拖拽容器中，自动放回原位
+		_is_ending_drag = true
+		_animate_to_original()
 
 
 func _get_input_position() -> Vector2:
@@ -218,6 +216,11 @@ func _reparent_to_source_immediate() -> void:
 func _animate_to_original() -> void:
 	if _dragged_cards.is_empty():
 		_cleanup_drag()
+		_is_ending_drag = false
+		return
+	if not is_instance_valid(_source_column):
+		_cleanup_drag()
+		_is_ending_drag = false
 		return
 
 	# 确保所有牌都已回到源列，防止因异步中断导致牌仍留在 _drag_container
@@ -233,11 +236,15 @@ func _animate_to_original() -> void:
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 
-	await _return_tween.finished
+	_return_tween.finished.connect(_on_return_tween_finished, CONNECT_ONE_SHOT)
+
+
+func _on_return_tween_finished() -> void:
 	_return_tween = null
 	if is_instance_valid(_source_column):
 		_source_column._reposition_cards()
 	_cleanup_drag()
+	_is_ending_drag = false
 
 
 ## 检查拖拽容器中是否有残留纸牌并将其收回所属列。
@@ -249,9 +256,10 @@ func _recover_any_stuck_cards() -> void:
 			continue
 		# 查找该纸牌在哪个列的 _cards 数组中
 		for col in _board.columns:
-			if col.get_cards().has(card):
-				if card.get_parent() != col:
+			if col.has_card(card):
+				if card.get_parent() == _drag_container:
 					_drag_container.remove_child(card)
+				if card.get_parent() != col:
 					col.add_child(card)
 				col._reposition_cards()
 				break

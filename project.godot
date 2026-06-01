@@ -30,6 +30,7 @@ Localization="*res://scripts/autoload/localization.gd"
 SoundManager="*res://scripts/autoload/sound_manager.gd"
 DragSystem="*res://scripts/drag_system.gd"
 MoveHistory="*res://scripts/move_history.gd"
+Drawing="*res://scripts/autoload/drawing.gd"
 
 [display]
 

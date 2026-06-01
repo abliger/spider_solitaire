@@ -14,11 +14,21 @@ var sfx_paths := {
 
 var sfx_cache := {}  # 预加载的音效资源缓存 / Preloaded SFX stream cache
 
+# SFX 播放器节点池（上限 8 个，复用以减少频繁创建/销毁节点）/ SFX player pool
+const MAX_SFX_POOL_SIZE := 8
+var _sfx_pool: Array[AudioStreamPlayer] = []
+var _sfx_pool_index: int = 0
+
 func _ready() -> void:
-	# 将播放器节点添加到场景树并分配到对应音频总线
 	add_child(music_player)
 	music_player.bus = "Music"
 	_preload_sfx()
+	# 预创建 SFX 播放器池
+	for i in range(MAX_SFX_POOL_SIZE):
+		var p := AudioStreamPlayer.new()
+		p.bus = "SFX"
+		add_child(p)
+		_sfx_pool.append(p)
 
 func _preload_sfx() -> void:
 	# 预加载所有音效资源到缓存，避免运行时重复加载
@@ -31,15 +41,13 @@ func play_sfx(sfx_name: String) -> void:
 	# 播放指定名称的音效；若音效关闭则直接返回
 	if not SettingsData.sound_enabled:
 		return
-	if sfx_cache.has(sfx_name):
-		# 为每个音效创建独立播放器，避免打断正在播放的音效
-		var player := AudioStreamPlayer.new()
-		player.stream = sfx_cache[sfx_name]
-		player.bus = "SFX"
-		add_child(player)
-		player.play()
-		# 播放完毕后自动释放播放器节点
-		player.finished.connect(func(): player.queue_free())
+	if not sfx_cache.has(sfx_name):
+		return
+	# 从池中获取播放器并轮换索引
+	var player := _sfx_pool[_sfx_pool_index]
+	_sfx_pool_index = (_sfx_pool_index + 1) % MAX_SFX_POOL_SIZE
+	player.stream = sfx_cache[sfx_name]
+	player.play()
 
 func play_music(music_name: String) -> void:
 	# 播放指定名称的背景音乐；若音乐关闭或已在播放则直接返回

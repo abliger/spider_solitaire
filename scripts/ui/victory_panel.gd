@@ -76,3 +76,4 @@ func ease_out_back(t: float) -> float:
 func hide_victory() -> void:
 	# 隐藏胜利面板
 	visible = false
+	set_process(false)

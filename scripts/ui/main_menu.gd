@@ -73,9 +73,4 @@ func _on_difficulty_back_pressed() -> void:
 	difficulty_panel.visible = false
 	buttons_container.visible = true
 
-func show_menu() -> void:
-	# 显示主菜单，并重新检查是否显示继续按钮
-	visible = true
-	continue_button.visible = _has_saved_game()
-	buttons_container.visible = true
-	difficulty_panel.visible = false
+

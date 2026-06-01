@@ -11,7 +11,6 @@ const CORNER_RADIUS: int = 8    # 圆角半径 / Corner radius for drawing
 
 var _completed_count: int = 0   # 当前已完成的序列数量 / Number of completed sequences
 var _completed_suits: Array[int] = []  # 每个完成序列的花色 / Suits of completed sequences
-var _back_texture: Texture2D = null  # 牌背纹理，用于填充完成的槽位 / Card back texture for filled slots
 var _cached_font: Font = null        # 缓存的主题字体 / Cached theme font
 
 
@@ -22,7 +21,6 @@ func _ready() -> void:
 		SLOT_HEIGHT
 	)
 	size = custom_minimum_size
-	_back_texture = load("res://assets/cards/back.png")
 	_cached_font = get_theme_default_font()
 	queue_redraw()
 
@@ -44,11 +42,6 @@ func remove_completed_sequence() -> void:
 		queue_redraw()
 
 
-## 返回目前已完成的序列数量。
-func get_completed_count() -> int:
-	return _completed_count
-
-
 ## 重置所有槽位为空。
 func reset() -> void:
 	_completed_count = 0
@@ -62,19 +55,19 @@ func _draw() -> void:
 		var rect := Rect2(Vector2(x, 0), Vector2(SLOT_WIDTH, SLOT_HEIGHT))
 
 		# 空槽位：深色内部配金色外边框
-		_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(0.06, 0.18, 0.1, 0.6))
-		draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(0.6, 0.5, 0.2, 0.5), 2.0)
+		Drawing.rounded_rect_fill(self, rect, CORNER_RADIUS, Color(0.06, 0.18, 0.1, 0.6))
+		Drawing.rounded_rect_outline(self, rect, CORNER_RADIUS, Color(0.6, 0.5, 0.2, 0.5), 2.0)
 		# 内部细金色线条
 		var inner_outline := rect.grow(-4)
-		draw_rounded_rect_outline(inner_outline, CORNER_RADIUS - 2, Color(0.5, 0.42, 0.15, 0.35), 1.0)
+		Drawing.rounded_rect_outline(self, inner_outline, CORNER_RADIUS - 2, Color(0.5, 0.42, 0.15, 0.35), 1.0)
 
 		# 如果该槽位有完成的序列，绘制填充的牌背风格指示器
 		if i < _completed_count:
 			var inner_rect := rect.grow(-6)
-			_draw_rounded_rect_fill(inner_rect, CORNER_RADIUS - 1, Color("#0c1f3d"))
+			Drawing.rounded_rect_fill(self, inner_rect, CORNER_RADIUS - 1, Color("#0c1f3d"))
 			var ii_rect := inner_rect.grow(-3)
-			_draw_rounded_rect_fill(ii_rect, CORNER_RADIUS - 2, Color("#0f2850"))
-			draw_rounded_rect_outline(ii_rect, CORNER_RADIUS - 2, Color("#1a3d6e"), 1.0)
+			Drawing.rounded_rect_fill(self, ii_rect, CORNER_RADIUS - 2, Color("#0f2850"))
+			Drawing.rounded_rect_outline(self, ii_rect, CORNER_RADIUS - 2, Color("#1a3d6e"), 1.0)
 
 			# 绘制对应花色的符号以指示完成的序列
 			var font: Font = _cached_font if _cached_font != null else get_theme_default_font()
@@ -98,43 +91,3 @@ func _get_suit_symbol(slot_index: int) -> String:
 		_: return "♠"
 
 
-## 用指定颜色填充一个圆角矩形。
-func _draw_rounded_rect_fill(rect: Rect2, radius: float, color: Color) -> void:
-	var r: float = min(radius, min(rect.size.x * 0.5, rect.size.y * 0.5))
-	var inner := Rect2(rect.position + Vector2(r, 0), rect.size - Vector2(r * 2, 0))
-	draw_rect(inner, color)
-	var inner_v := Rect2(rect.position + Vector2(0, r), rect.size - Vector2(0, r * 2))
-	draw_rect(inner_v, color)
-	draw_circle(rect.position + Vector2(r, r), r, color)
-	draw_circle(rect.position + Vector2(rect.size.x - r, r), r, color)
-	draw_circle(rect.position + Vector2(rect.size.x - r, rect.size.y - r), r, color)
-	draw_circle(rect.position + Vector2(r, rect.size.y - r), r, color)
-
-
-func draw_rounded_rect_outline(rect: Rect2, radius: float, color: Color, width: float) -> void:
-	var r: float = min(radius, min(rect.size.x * 0.5, rect.size.y * 0.5))
-	var tl := rect.position + Vector2(r, r)
-	var tr := rect.position + Vector2(rect.size.x - r, r)
-	var br := rect.position + rect.size - Vector2(r, r)
-	var bl := rect.position + Vector2(r, rect.size.y - r)
-
-	draw_line(tl + Vector2(-r, 0), tr + Vector2(r, 0), color, width)
-	draw_line(tr + Vector2(0, -r), br + Vector2(0, r), color, width)
-	draw_line(br + Vector2(r, 0), bl + Vector2(-r, 0), color, width)
-	draw_line(bl + Vector2(0, r), tl + Vector2(0, -r), color, width)
-
-	var points := 8
-	_draw_arc(tl, r, PI, PI * 1.5, points, color, width)
-	_draw_arc(tr, r, PI * 1.5, TAU, points, color, width)
-	_draw_arc(br, r, 0, PI * 0.5, points, color, width)
-	_draw_arc(bl, r, PI * 0.5, PI, points, color, width)
-
-
-func _draw_arc(center: Vector2, radius: float, start_angle: float, end_angle: float, points: int, color: Color, width: float) -> void:
-	var angle_step := (end_angle - start_angle) / points
-	for i in range(points):
-		var a1 := start_angle + angle_step * i
-		var a2 := start_angle + angle_step * (i + 1)
-		var p1 := center + Vector2(cos(a1), sin(a1)) * radius
-		var p2 := center + Vector2(cos(a2), sin(a2)) * radius
-		draw_line(p1, p2, color, width)
