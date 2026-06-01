@@ -70,12 +70,16 @@ func _ready() -> void:
 
 
 func _draw() -> void:
+	# 提示高亮发光层（绘制在纸牌下方）
+	if is_highlighted:
+		_draw_highlight_glow()
+
 	if face_up:
 		_draw_face_up()
 	else:
 		_draw_face_down()
 
-	# 高亮覆盖层
+	# 高亮覆盖层（绘制在纸牌上方）
 	if is_highlighted:
 		_draw_highlight()
 
@@ -202,13 +206,18 @@ func _draw_face_down() -> void:
 		_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color("#0c1f3d"))
 
 
+func _draw_highlight_glow() -> void:
+	var glow_rect := Rect2(Vector2(-6, -6), size + Vector2(12, 12))
+	_draw_rounded_rect_fill(glow_rect, CORNER_RADIUS + 3, Color(1.0, 0.9, 0.0, 0.50))
+	draw_rounded_rect_outline(glow_rect, CORNER_RADIUS + 3, Color(1.0, 1.0, 0.3, 1.0), 5.0)
+
 func _draw_highlight() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
 	# 高饱和度金色发光覆盖层（提示效果更明显）
-	_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(1.0, 0.85, 0.0, 0.40))
-	draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(1.0, 0.95, 0.2, 0.95), 3.5)
+	_draw_rounded_rect_fill(rect, CORNER_RADIUS, Color(1.0, 0.92, 0.0, 0.55))
+	draw_rounded_rect_outline(rect, CORNER_RADIUS, Color(1.0, 1.0, 0.5, 1.0), 4.0)
 	# 内部细亮线
-	draw_rounded_rect_outline(rect.grow(-4), CORNER_RADIUS - 1, Color(1.0, 1.0, 0.7, 0.7), 1.5)
+	draw_rounded_rect_outline(rect.grow(-4), CORNER_RADIUS - 1, Color(1.0, 1.0, 0.9, 0.9), 2.0)
 
 
 ## 用给定颜色填充圆角矩形。

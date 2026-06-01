@@ -348,3 +348,40 @@ func _draw() -> void:
 		draw_rect(rect, Color(1.0, 0.85, 0.0, 0.30))
 		# 金色边框
 		draw_rect(rect, Color(1.0, 0.95, 0.2, 0.90), false, 3.5)
+	elif _cards.is_empty():
+		_draw_empty_placeholder()
+
+
+## 在空列底部绘制占位矩形边框，提示此处可以放置纸牌。
+func _draw_empty_placeholder() -> void:
+	var padding := 4.0
+	var rect := Rect2(Vector2(padding, padding), Vector2(CARD_WIDTH - padding * 2, CARD_HEIGHT - padding * 2))
+	# 半透明填充
+	draw_rect(rect, Color(0.9, 0.9, 0.9, 0.06))
+	# 虚线风格边框：使用浅灰色短线段
+	var dash_len := 8.0
+	var gap_len := 4.0
+	var line_width := 2.0
+	var color := Color(0.85, 0.85, 0.85, 0.40)
+	# 上边
+	_dash_line(Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y), dash_len, gap_len, color, line_width)
+	# 下边
+	_dash_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
+	# 左边
+	_dash_line(Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
+	# 右边
+	_dash_line(Vector2(rect.position.x + rect.size.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
+
+
+## 绘制虚线线段。
+func _dash_line(from: Vector2, to: Vector2, dash_len: float, gap_len: float, color: Color, width: float) -> void:
+	var total := from.distance_to(to)
+	if total <= 0:
+		return
+	var dir := (to - from).normalized()
+	var pos := 0.0
+	while pos < total:
+		var seg_start := from + dir * pos
+		var seg_end: Vector2 = from + dir * minf(pos + dash_len, total)
+		draw_line(seg_start, seg_end, color, width)
+		pos += dash_len + gap_len
