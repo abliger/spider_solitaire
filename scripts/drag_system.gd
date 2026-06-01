@@ -69,6 +69,9 @@ func start_drag(source_column: Column, card: Card) -> void:
 	if not GameState.is_game_active:
 		return
 
+	# 安全网：如果拖拽容器中还有残留纸牌，先将其收回所属列
+	_recover_any_stuck_cards()
+
 	var movable = source_column.get_movable_sequence()
 	if movable.is_empty() or not card in movable:
 		return
@@ -259,6 +262,22 @@ func _animate_to_original() -> void:
 	_cleanup_drag()
 	drag_ended.emit(false, null)
 
+
+## 检查拖拽容器中是否有残留纸牌并将其收回所属列。
+func _recover_any_stuck_cards() -> void:
+	if _board == null:
+		return
+	for card in _drag_container.get_children():
+		if not (card is Card):
+			continue
+		# 查找该纸牌在哪个列的 _cards 数组中
+		for col in _board.columns:
+			if col.get_cards().has(card):
+				if card.get_parent() != col:
+					_drag_container.remove_child(card)
+					col.add_child(card)
+				col._reposition_cards()
+				break
 
 func _cleanup_drag() -> void:
 	# 注意：z_index 由 Column._reposition_cards() 管理，不要在这里重置。
