@@ -360,8 +360,9 @@ func _animate_sequence_to_foundation(sequence: Array[Card], start_positions: Arr
 		return
 
 	# 将牌加入 _foundation_container 并恢复起始全局位置
-	# z_index 倒序：K（序列底部）叠在最上方，符合压牌逻辑
-	for i in range(sequence.size()):
+	# 反向遍历添加：A 先添加（底层），K 最后添加（顶层），
+	# 确保子节点顺序与 z_index 一致，K 最终在最上方。
+	for i in range(sequence.size() - 1, -1, -1):
 		var card := sequence[i]
 		if card.get_parent() != null:
 			card.get_parent().remove_child(card)

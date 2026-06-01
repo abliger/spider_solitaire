@@ -9,6 +9,14 @@ export_presets.cfg
 android/
 ios/
 
+# iOS 导出产物（包含超过 100MB 的静态库）
+MoltenVK.xcframework/
+Spider Solitaire.xcframework/
+Spider Solitaire.xcodeproj/
+Spider Solitaire/
+Spider Solitaire.pck
+PrivacyInfo.xcprivacy
+
 # 构建目录
 build/
 
