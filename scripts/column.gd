@@ -197,7 +197,7 @@ func _reposition_cards() -> void:
 		card.z_index = i
 		current_y += overlaps[i]
 
-	_set_dynamic_height()
+	_set_dynamic_height(overlaps)
 
 
 ## 计算原始间距数组（未压缩）。
@@ -215,17 +215,11 @@ func _get_raw_overlaps() -> Array[int]:
 func _get_compressed_overlaps() -> Array[float]:
 	var overlaps: Array[int] = _get_raw_overlaps()
 	if overlaps.is_empty():
-		var result: Array[float] = []
-		for o in overlaps:
-			result.append(float(o))
-		return result
+		return []
 
 	var effective_max := _get_effective_max_height()
 	if effective_max <= 0:
-		var result: Array[float] = []
-		for o in overlaps:
-			result.append(float(o))
-		return result
+		return []
 
 	# 计算当前视觉高度（n 张牌只需 n-1 个有效间距 + CARD_HEIGHT）
 	var visual_height := float(CARD_HEIGHT)
@@ -233,10 +227,7 @@ func _get_compressed_overlaps() -> Array[float]:
 		visual_height += overlaps[i]
 
 	if visual_height <= effective_max:
-		var result: Array[float] = []
-		for o in overlaps:
-			result.append(float(o))
-		return result
+		return overlaps.map(func(o): return float(o))
 
 	# 非等比例压缩策略
 	const MIN_FACE_DOWN := 12.0  # 背面牌最小间距，保留边缘可见以便数牌 / Keep edges visible to count cards
@@ -294,11 +285,12 @@ func _get_effective_max_height() -> float:
 
 
 ## 调整列的最小大小以适应所有堆叠的纸牌。
-func _set_dynamic_height() -> void:
+func _set_dynamic_height(overlaps: Array[float] = []) -> void:
 	if _cards.is_empty():
 		custom_minimum_size.y = CARD_HEIGHT
 	else:
-		var overlaps := _get_compressed_overlaps()
+		if overlaps.is_empty():
+			overlaps = _get_compressed_overlaps()
 		var total_y: float = 0.0
 		# n 张牌只需要 n-1 个间距来决定高度，最后一张牌的 overlap 留给下一张预测用
 		for i in range(overlaps.size() - 1):
@@ -363,13 +355,9 @@ func _draw_empty_placeholder() -> void:
 	var gap_len := 4.0
 	var line_width := 2.0
 	var color := Color(0.85, 0.85, 0.85, 0.40)
-	# 上边
 	_dash_line(Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y), dash_len, gap_len, color, line_width)
-	# 下边
 	_dash_line(Vector2(rect.position.x, rect.position.y + rect.size.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
-	# 左边
 	_dash_line(Vector2(rect.position.x, rect.position.y), Vector2(rect.position.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
-	# 右边
 	_dash_line(Vector2(rect.position.x + rect.size.x, rect.position.y), Vector2(rect.position.x + rect.size.x, rect.position.y + rect.size.y), dash_len, gap_len, color, line_width)
 
 

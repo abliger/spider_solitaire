@@ -82,6 +82,9 @@ func _draw() -> void:
 			draw_rounded_rect_outline(card_rect, CORNER_RADIUS, Color("#081830"), 1.5)
 
 
+
+
+
 ## 用指定颜色填充一个圆角矩形。
 func _draw_rounded_rect_fill(rect: Rect2, radius: float, color: Color) -> void:
 	var r: float = min(radius, min(rect.size.x * 0.5, rect.size.y * 0.5))

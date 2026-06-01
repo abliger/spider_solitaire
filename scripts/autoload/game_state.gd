@@ -65,8 +65,8 @@ func reset_game() -> void:
 	game_reset.emit()
 
 func add_score(delta: int) -> void:
-	# 增加（或减少）分数 / Add or subtract from the score
-	score += delta
+	# 增加（或减少）分数，最低为 0 / Add or subtract from the score, clamped to minimum 0
+	score = maxi(0, score + delta)
 
 func increment_move() -> void:
 	# 步数加一 / Increment the move counter by one

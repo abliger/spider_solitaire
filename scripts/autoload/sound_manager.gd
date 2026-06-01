@@ -1,6 +1,5 @@
 extends Node
 
-@onready var sfx_player: AudioStreamPlayer = AudioStreamPlayer.new()    # 音效播放器 / SFX audio player
 @onready var music_player: AudioStreamPlayer = AudioStreamPlayer.new()  # 音乐播放器 / Music audio player
 
 # 音效资源路径映射 / SFX resource path mapping
@@ -17,10 +16,8 @@ var sfx_cache := {}  # 预加载的音效资源缓存 / Preloaded SFX stream cac
 
 func _ready() -> void:
 	# 将播放器节点添加到场景树并分配到对应音频总线
-	add_child(sfx_player)
 	add_child(music_player)
 	music_player.bus = "Music"
-	sfx_player.bus = "SFX"
 	_preload_sfx()
 
 func _preload_sfx() -> void:
@@ -45,12 +42,15 @@ func play_sfx(sfx_name: String) -> void:
 		player.finished.connect(func(): player.queue_free())
 
 func play_music(music_name: String) -> void:
-	# 播放指定名称的背景音乐；若音乐关闭则直接返回
+	# 播放指定名称的背景音乐；若音乐关闭或已在播放则直接返回
 	if not SettingsData.music_enabled:
 		return
 	var path := "res://assets/sounds/%s.ogg" % music_name
 	if ResourceLoader.exists(path):
-		music_player.stream = load(path)
+		var stream := load(path) as AudioStream
+		if music_player.stream == stream and music_player.playing:
+			return
+		music_player.stream = stream
 		music_player.play()
 
 func stop_music() -> void:

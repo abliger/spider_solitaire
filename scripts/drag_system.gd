@@ -2,10 +2,6 @@ extends Node
 
 ## 单例 / 自动加载，用于处理整个面板的纸牌拖拽。
 
-signal drag_started(cards)
-signal drag_ended(success: bool, target_column: Column)
-signal invalid_move_attempted
-
 const DRAG_LAYER: int = 100
 
 var _board: Board = null
@@ -33,6 +29,11 @@ func _ready() -> void:
 ## 注册活跃的游戏面板，以便拖拽系统可以查询列并执行移动。
 func register_board(board: Board) -> void:
 	_board = board
+
+
+## 返回当前是否正在拖拽纸牌。
+func is_dragging() -> bool:
+	return _is_dragging
 
 
 ## 强制立即结束任何活跃的拖拽（无动画）。重置面板时使用。
@@ -99,7 +100,6 @@ func start_drag(source_column: Column, card: Card) -> void:
 		c.z_index = DRAG_LAYER + i
 
 	_is_dragging = true
-	drag_started.emit(_dragged_cards.duplicate())
 
 
 ## 结束当前拖拽，验证放置，然后提交移动或播放返回动画。
@@ -130,9 +130,7 @@ func end_drag() -> void:
 	if success:
 		_cleanup_drag()
 		_is_ending_drag = false
-		drag_ended.emit(true, target_column)
 	else:
-		invalid_move_attempted.emit()
 		await _animate_to_original()
 		_is_ending_drag = false
 
@@ -189,35 +187,16 @@ func _get_input_position() -> Vector2:
 	return get_viewport().get_mouse_position()
 
 
-## 在给定位置下进行射线检测以查找 Column Area2D。
+## 使用 Control 全局矩形检测给定位置下属于哪个 Column。
 func _detect_column_at_position(pos: Vector2) -> Column:
 	if _board == null:
 		return null
 
-	var space_state := get_viewport().world_2d.direct_space_state
-	var query := PhysicsPointQueryParameters2D.new()
-	# 将视口坐标转换为世界坐标，以兼容 Camera2D
-	var camera := get_viewport().get_camera_2d()
-	if camera:
-		query.position = camera.get_canvas_transform().affine_inverse() * pos
-	else:
-		query.position = pos
-	query.collision_mask = 2  # Columns are on layer 2
-	# 列位于碰撞层 2
-	query.collide_with_areas = true
-	query.collide_with_bodies = false
-
-	var results := space_state.intersect_point(query, 1)
-	if results.is_empty():
-		return null
-
-	var collider: Area2D = results[0].collider
-	if collider == null:
-		return null
-
-	var parent := collider.get_parent()
-	if parent is Column:
-		return parent
+	for col in _board.columns:
+		if col == null or not is_instance_valid(col):
+			continue
+		if col.get_global_rect().has_point(pos):
+			return col
 
 	return null
 
@@ -239,7 +218,6 @@ func _reparent_to_source_immediate() -> void:
 func _animate_to_original() -> void:
 	if _dragged_cards.is_empty():
 		_cleanup_drag()
-		drag_ended.emit(false, null)
 		return
 
 	# 确保所有牌都已回到源列，防止因异步中断导致牌仍留在 _drag_container
@@ -260,7 +238,6 @@ func _animate_to_original() -> void:
 	if is_instance_valid(_source_column):
 		_source_column._reposition_cards()
 	_cleanup_drag()
-	drag_ended.emit(false, null)
 
 
 ## 检查拖拽容器中是否有残留纸牌并将其收回所属列。

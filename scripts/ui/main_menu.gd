@@ -53,8 +53,8 @@ func _update_ui_text() -> void:
 	back_button.text = Localization.translate("back")
 
 func _has_saved_game() -> bool:
-	# 判断是否存在可以继续的游戏（步数或时间大于 0）
-	return GameState.move_count > 0 or GameState.elapsed_time > 0
+	# 判断是否存在可以继续的游戏（至少有过一步移动）
+	return GameState.move_count > 0
 
 func _on_new_game_pressed() -> void:
 	# 点击新游戏：隐藏主菜单按钮，显示难度选择面板

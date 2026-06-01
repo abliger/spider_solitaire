@@ -257,3 +257,6 @@ func _draw_arc(center: Vector2, radius: float, start_angle: float, end_angle: fl
 		var p1 := center + Vector2(cos(a1), sin(a1)) * radius
 		var p2 := center + Vector2(cos(a2), sin(a2)) * radius
 		draw_line(p1, p2, color, width)
+
+
+

@@ -55,11 +55,14 @@ static func create_deck(num_suits: int) -> Array[CardData]:
 				deck.append(CardData.new(s, r))
 	return deck
 
+static var _rng := RandomNumberGenerator.new()  # 复用的随机数生成器 / Reused RNG
+
+static func _static_init() -> void:
+	_rng.randomize()
+
 static func shuffle(deck: Array[CardData]) -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
 	for i in range(deck.size() - 1, 0, -1):
-		var j := rng.randi_range(0, i)
+		var j := _rng.randi_range(0, i)
 		var temp := deck[i]
 		deck[i] = deck[j]
 		deck[j] = temp
@@ -175,10 +178,11 @@ static func _cards_to_data(cards: Array) -> Array[CardData]:
 	for card in cards:
 		if card is CardData:
 			result.append(card)
-		elif ("suit" in card) and ("rank" in card):
-			# 将 Card 节点转换为 CardData
+		elif card.has_method("set_card_data"):
+			# Card 节点
 			var data := CardData.new(card.suit, card.rank)
-			if "face_up" in card:
-				data.face_up = card.face_up
+			data.face_up = card.face_up
 			result.append(data)
+		else:
+			push_warning("RulesEngine: unknown card type in _cards_to_data: %s" % card)
 	return result

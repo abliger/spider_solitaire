@@ -10,7 +10,9 @@ const NUM_SLOTS: int = 8        # 总槽位数量（对应 8 组完整序列） 
 const CORNER_RADIUS: int = 8    # 圆角半径 / Corner radius for drawing
 
 var _completed_count: int = 0   # 当前已完成的序列数量 / Number of completed sequences
+var _completed_suits: Array[int] = []  # 每个完成序列的花色 / Suits of completed sequences
 var _back_texture: Texture2D = null  # 牌背纹理，用于填充完成的槽位 / Card back texture for filled slots
+var _cached_font: Font = null        # 缓存的主题字体 / Cached theme font
 
 
 func _ready() -> void:
@@ -21,13 +23,15 @@ func _ready() -> void:
 	)
 	size = custom_minimum_size
 	_back_texture = load("res://assets/cards/back.png")
+	_cached_font = get_theme_default_font()
 	queue_redraw()
 
 
 ## 将另一个槽位标记为由完成的序列填充。
-func add_completed_sequence() -> void:
+func add_completed_sequence(suit: int = -1) -> void:
 	if _completed_count < NUM_SLOTS:
 		_completed_count += 1
+		_completed_suits.append(suit)
 		queue_redraw()
 
 
@@ -35,6 +39,8 @@ func add_completed_sequence() -> void:
 func remove_completed_sequence() -> void:
 	if _completed_count > 0:
 		_completed_count -= 1
+		if _completed_suits.size() > 0:
+			_completed_suits.pop_back()
 		queue_redraw()
 
 
@@ -46,6 +52,7 @@ func get_completed_count() -> int:
 ## 重置所有槽位为空。
 func reset() -> void:
 	_completed_count = 0
+	_completed_suits.clear()
 	queue_redraw()
 
 
@@ -69,14 +76,26 @@ func _draw() -> void:
 			_draw_rounded_rect_fill(ii_rect, CORNER_RADIUS - 2, Color("#0f2850"))
 			draw_rounded_rect_outline(ii_rect, CORNER_RADIUS - 2, Color("#1a3d6e"), 1.0)
 
-			# 绘制黑桃符号以指示完成的序列
-			var font: Font = get_theme_default_font()
-			var symbol: String = "♠"
+			# 绘制对应花色的符号以指示完成的序列
+			var font: Font = _cached_font if _cached_font != null else get_theme_default_font()
+			var symbol: String = _get_suit_symbol(i)
 			var text_size: Vector2 = font.get_string_size(symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 32)
 			var pos: Vector2 = rect.position + (rect.size - text_size) * 0.5 + Vector2(0, text_size.y * 0.5)
 			# 轻微阴影
 			draw_string(font, pos + Vector2(1, 1), symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 32, Color(0, 0, 0, 0.3))
 			draw_string(font, pos, symbol, HORIZONTAL_ALIGNMENT_CENTER, -1, 32, Color.WHITE)
+
+
+## 返回指定索引槽位对应的花色符号。
+func _get_suit_symbol(slot_index: int) -> String:
+	if slot_index < 0 or slot_index >= _completed_suits.size():
+		return "♠"
+	match _completed_suits[slot_index]:
+		0: return "♠"
+		1: return "♥"
+		2: return "♦"
+		3: return "♣"
+		_: return "♠"
 
 
 ## 用指定颜色填充一个圆角矩形。

@@ -60,6 +60,9 @@ var _is_dealing: bool = false
 var _stock_container: Node
 var _foundation_container: Node
 
+## 提示高亮自动清除定时器 / Hint highlight auto-clear timer
+var _hint_timer: Timer = null
+
 # ---------------------------------------------------------------------------
 # 内置函数重写
 # ---------------------------------------------------------------------------
@@ -79,6 +82,11 @@ func _ready() -> void:
 	_foundation_container.name = "FoundationContainer"
 	add_child(_foundation_container)
 
+	_hint_timer = Timer.new()
+	_hint_timer.one_shot = true
+	_hint_timer.timeout.connect(_clear_hint_highlight)
+	add_child(_hint_timer)
+
 
 # ---------------------------------------------------------------------------
 # 游戏设置
@@ -86,7 +94,7 @@ func _ready() -> void:
 ## 以给定难度开始新游戏（1 = 简单，2 = 中等，4 = 困难）。
 func setup_new_game(difficulty: int) -> void:
 	current_difficulty = difficulty
-	_clear_board()
+	clear_board()
 
 	# 使用现有的 RulesEngine 创建牌组
 	var deck_data: Array[RulesEngine.CardData] = RulesEngine.create_deck(current_difficulty)
@@ -157,6 +165,9 @@ func deal_from_stock() -> bool:
 	# 检查是否正在发牌动画中
 	if _is_dealing:
 		return false
+	# 拖拽中不允许发牌，防止状态冲突
+	if DragSystem.is_dragging():
+		return false
 
 	_is_dealing = true
 
@@ -173,8 +184,6 @@ func deal_from_stock() -> bool:
 			_stock_container.remove_child(card)
 		dealt.append(card)
 
-		# 先计算目标本地位置，再加入列
-		var target_local := col.get_next_card_position()
 		col.add_cards([card])
 
 		# 记录目标全局位置
@@ -351,9 +360,8 @@ func _check_all_columns_for_sequences() -> Dictionary:
 
 			# 移除 13 张纸牌的序列
 			var sequence: Array[Card] = []
-			var source_cards = col.get_cards()
 			for i in range(start_idx, start_idx + FULL_SEQUENCE_LENGTH):
-				sequence.append(source_cards[i])
+				sequence.append(cards[i])
 
 			# 记录动画起始位置
 			var start_positions: Array[Vector2] = []
@@ -449,8 +457,7 @@ func show_hint() -> bool:
 	SoundManager.play_sfx("click")
 
 	# 3 秒后自动清除高亮
-	var timer := get_tree().create_timer(3.0)
-	timer.timeout.connect(_clear_hint_highlight)
+	_hint_timer.start(3.0)
 	return true
 
 
@@ -531,7 +538,7 @@ func _update_stock_label() -> void:
 
 
 ## 移除所有列和纸牌，并重置发牌堆 / 基础区。
-func _clear_board() -> void:
+func clear_board() -> void:
 	# 清理前强制结束任何活跃的拖拽
 	DragSystem.force_end_drag()
 
@@ -555,3 +562,15 @@ func _clear_board() -> void:
 
 	_update_stock_label()
 	_is_dealing = false
+
+
+## 返回当前已完成序列的数量。
+func get_foundation_count() -> int:
+	return foundations.size()
+
+
+## 移除并返回最后一个完成的序列（用于撤销）。
+func pop_last_foundation() -> Array:
+	if foundations.is_empty():
+		return []
+	return foundations.pop_back()

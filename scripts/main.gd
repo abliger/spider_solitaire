@@ -100,8 +100,11 @@ func _on_board_ready() -> void:
 	stock.set_remaining(board.stock.size())
 	foundation.reset()
 
-func _on_sequence_completed(_sequence: Array) -> void:
-	foundation.add_completed_sequence()
+func _on_sequence_completed(sequence: Array) -> void:
+	var suit: int = -1
+	if sequence.size() > 0 and sequence[0] is Card:
+		suit = sequence[0].suit
+	foundation.add_completed_sequence(suit)
 
 func _on_start_game(difficulty: int) -> void:
 	_start_game(difficulty)
@@ -129,8 +132,7 @@ func _on_undo_pressed() -> void:
 	# 1. 先还回完成的序列牌（如果有）
 	for seq_info in record.completed_sequences:
 		foundation.remove_completed_sequence()
-		if board.foundations.size() > 0:
-			board.foundations.pop_back()
+		board.pop_last_foundation()
 		var seq_col: Column = board.columns[seq_info.column_index]
 		if is_instance_valid(seq_col):
 			seq_col.add_cards(seq_info.cards)
@@ -207,7 +209,7 @@ func _on_rules_closed() -> void:
 
 func _on_return_to_main_menu() -> void:
 	GameState.reset_game()
-	board._clear_board()
+	board.clear_board()
 	_show_main_menu()
 
 
@@ -229,5 +231,5 @@ func _on_game_won() -> void:
 	victory_panel.visible = true
 
 func _on_play_again() -> void:
-	victory_panel.visible = false
+	victory_panel.hide_victory()
 	_start_game(GameState.current_difficulty)
